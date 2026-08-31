@@ -16,7 +16,10 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Solidarize",
+  title: {
+    default: "Solidarize",
+    template: "%s | Solidarize",
+  },
   description: "Solidarize é uma plataforma de gestão de doações para instituições de caridade.",
 };
 
