@@ -5,6 +5,18 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    settings: {
+      react: {
+        version: "19.2.8",
+      },
+    },
+    rules: {
+      quotes: ["error", "double", { allowTemplateLiterals: true }],
+      "jsx-quotes": ["error", "prefer-double"],
+      semi: ["error", "always"],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -12,6 +24,7 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "**/*.css",
   ]),
 ]);
 
