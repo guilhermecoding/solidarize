@@ -1,6 +1,6 @@
 import { LoginForm } from "@/components/login-form";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { LayoutBottomIcon } from "@hugeicons/core-free-icons";
+import IconLogo from "@/components/logo/icon-logo";
+import TextLogo from "@/components/logo/text-logo";
 import type { Metadata } from "next";
 import Image from "next/image";
 
@@ -23,12 +23,10 @@ export default function LoginPage() {
 
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex justify-center gap-2 md:justify-start">
-          <a href="#" className="flex items-center gap-2 font-medium">
-            <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <HugeiconsIcon icon={LayoutBottomIcon} strokeWidth={2} className="size-4" />
-            </div>
-            Acme Inc.
-          </a>
+          <div className="flex items-center gap-2">
+            <IconLogo className="size-10" />
+            <TextLogo className="text-3xl" />
+          </div>
         </div>
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">
