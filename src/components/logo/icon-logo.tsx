@@ -12,7 +12,7 @@ export default function IconLogo({ className }: IconLogoProps) {
             alt="Icone da logo"
             width={100}
             height={100}
-            className={cn("size-6 object-contain", className)}
+            className={cn("size-6 object-contain pointer-events-none select-none", className)}
             loading="eager"
         />
     );
