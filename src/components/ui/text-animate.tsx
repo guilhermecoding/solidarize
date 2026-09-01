@@ -1,15 +1,15 @@
-"use client"
+"use client";
 
-import { memo } from "react"
+import { memo } from "react";
 import {
   AnimatePresence,
   motion,
   type DOMMotionComponents,
   type MotionProps,
   type Variants,
-} from "motion/react"
+} from "motion/react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 type AnimationType = "text" | "word" | "character" | "line"
 type AnimationVariant =
@@ -37,7 +37,7 @@ const motionElements = {
   p: motion.p,
   section: motion.section,
   span: motion.span,
-} as const
+} as const;
 
 type MotionElementType = Extract<
   keyof DOMMotionComponents,
@@ -100,7 +100,7 @@ const staggerTimings: Record<AnimationType, number> = {
   word: 0.05,
   character: 0.03,
   line: 0.06,
-}
+};
 
 const defaultContainerVariants = {
   hidden: { opacity: 1 },
@@ -118,7 +118,7 @@ const defaultContainerVariants = {
       staggerDirection: -1,
     },
   },
-}
+};
 
 const defaultItemVariants: Variants = {
   hidden: { opacity: 0 },
@@ -128,7 +128,7 @@ const defaultItemVariants: Variants = {
   exit: {
     opacity: 0,
   },
-}
+};
 
 const defaultItemAnimationVariants: Record<
   AnimationVariant,
@@ -326,7 +326,7 @@ const defaultItemAnimationVariants: Record<
       },
     },
   },
-}
+};
 
 const TextAnimateBase = ({
   children,
@@ -343,69 +343,69 @@ const TextAnimateBase = ({
   accessible = true,
   ...props
 }: TextAnimateProps) => {
-  const MotionComponent = motionElements[Component]
+  const MotionComponent = motionElements[Component];
 
-  let segments: string[] = []
+  let segments: string[] = [];
   switch (by) {
     case "word":
-      segments = children.split(/(\s+)/)
-      break
+      segments = children.split(/(\s+)/);
+      break;
     case "character":
-      segments = children.split("")
-      break
+      segments = children.split("");
+      break;
     case "line":
-      segments = children.split("\n")
-      break
+      segments = children.split("\n");
+      break;
     case "text":
     default:
-      segments = [children]
-      break
+      segments = [children];
+      break;
   }
 
   const finalVariants = variants
     ? {
+      container: {
+        hidden: { opacity: 0 },
+        show: {
+          opacity: 1,
+          transition: {
+            opacity: { duration: 0.01, delay },
+            delayChildren: delay,
+            staggerChildren: duration / segments.length,
+          },
+        },
+        exit: {
+          opacity: 0,
+          transition: {
+            staggerChildren: duration / segments.length,
+            staggerDirection: -1,
+          },
+        },
+      },
+      item: variants,
+    }
+    : animation
+      ? {
         container: {
-          hidden: { opacity: 0 },
+          ...defaultItemAnimationVariants[animation].container,
           show: {
-            opacity: 1,
+            ...defaultItemAnimationVariants[animation].container.show,
             transition: {
-              opacity: { duration: 0.01, delay },
               delayChildren: delay,
               staggerChildren: duration / segments.length,
             },
           },
           exit: {
-            opacity: 0,
+            ...defaultItemAnimationVariants[animation].container.exit,
             transition: {
               staggerChildren: duration / segments.length,
               staggerDirection: -1,
             },
           },
         },
-        item: variants,
+        item: defaultItemAnimationVariants[animation].item,
       }
-    : animation
-      ? {
-          container: {
-            ...defaultItemAnimationVariants[animation].container,
-            show: {
-              ...defaultItemAnimationVariants[animation].container.show,
-              transition: {
-                delayChildren: delay,
-                staggerChildren: duration / segments.length,
-              },
-            },
-            exit: {
-              ...defaultItemAnimationVariants[animation].container.exit,
-              transition: {
-                staggerChildren: duration / segments.length,
-                staggerDirection: -1,
-              },
-            },
-          },
-          item: defaultItemAnimationVariants[animation].item,
-        }
-      : { container: defaultContainerVariants, item: defaultItemVariants }
+      : { container: defaultContainerVariants, item: defaultItemVariants };
 
   return (
     <AnimatePresence mode="popLayout">
@@ -438,8 +438,8 @@ const TextAnimateBase = ({
         ))}
       </MotionComponent>
     </AnimatePresence>
-  )
-}
+  );
+};
 
 // Export the memoized version
-export const TextAnimate = memo(TextAnimateBase)
+export const TextAnimate = memo(TextAnimateBase);
