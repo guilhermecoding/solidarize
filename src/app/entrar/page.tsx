@@ -1,4 +1,4 @@
-import { LoginForm } from "@/components/login-form";
+import { LoginForm } from "@/app/entrar/_components/login-form";
 import IconLogo from "@/components/logo/icon-logo";
 import TextLogo from "@/components/logo/text-logo";
 import type { Metadata } from "next";

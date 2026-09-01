@@ -1,5 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import Mail01Icon from "@hugeicons/core-free-icons/Mail01Icon";
 import SquareLock01Icon from "@hugeicons/core-free-icons/SquareLock01Icon";
+import ViewIcon from "@hugeicons/core-free-icons/ViewIcon";
+import ViewOffSlashIcon from "@hugeicons/core-free-icons/ViewOffSlashIcon";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { cn } from "@/lib/utils";
@@ -17,6 +22,12 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
+  const [viewPassword, setViewPassword] = useState(false);
+
+  const handleViewPassword = () => {
+    setViewPassword((visible) => !visible);
+  };
+
   return (
     <form className={cn("flex flex-col gap-6", className)} {...props}>
       <FieldGroup>
@@ -28,26 +39,32 @@ export function LoginForm({
           <Input
             id="email"
             type="email"
-            placeholder="m@example.com"
+            placeholder="seu@email.com"
             required
             startIcon={<HugeiconsIcon icon={Mail01Icon} strokeWidth={1.5} />}
           />
         </Field>
         <Field>
-          <div className="flex items-center">
-            <FieldLabel htmlFor="password">Password</FieldLabel>
-            <a
-              href="#"
-              className="ml-auto text-sm underline-offset-4 hover:underline"
-            >
-              Forgot your password?
-            </a>
-          </div>
+          <FieldLabel htmlFor="password">Senha</FieldLabel>
           <Input
             id="password"
-            type="password"
+            type={viewPassword ? "text" : "password"}
+            placeholder="••••••••"
             required
             startIcon={<HugeiconsIcon icon={SquareLock01Icon} strokeWidth={1.5} />}
+            endIcon={
+              <button
+                type="button"
+                onClick={handleViewPassword}
+                aria-label={viewPassword ? "Ocultar senha" : "Mostrar senha"}
+                className="cursor-pointer"
+              >
+                <HugeiconsIcon
+                  icon={viewPassword ? ViewIcon : ViewOffSlashIcon}
+                  strokeWidth={1.5}
+                />
+              </button>
+            }
           />
         </Field>
         <Field>
