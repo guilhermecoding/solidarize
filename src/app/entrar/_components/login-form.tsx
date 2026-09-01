@@ -57,7 +57,7 @@ export function LoginForm({
                 className="cursor-pointer"
               >
                 <HugeiconsIcon
-                  icon={viewPassword ? ViewIcon : ViewOffSlashIcon}
+                  icon={!viewPassword ? ViewIcon : ViewOffSlashIcon}
                   strokeWidth={1.5}
                 />
               </button>

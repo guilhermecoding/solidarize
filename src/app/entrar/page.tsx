@@ -13,18 +13,19 @@ export default function LoginPage() {
     <div className="grid min-h-svh lg:grid-cols-2">
       <div className="relative hidden bg-muted lg:block">
         <Image
-          src="/placeholder.svg"
+          src="/login-image.png"
           alt="Image"
           width={1000}
           height={1000}
-          className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+          className="absolute inset-0 h-full w-full object-cover pointer-events-none select-none"
+          loading="eager"
         />
       </div>
 
       <div className="flex flex-col gap-4 p-6 md:p-10">
-        <div className="flex justify-center gap-2 md:justify-start">
+        <div className="flex justify-center gap-2 ">
           <div className="flex items-center gap-2">
-            <IconLogo className="size-10" />
+            <IconLogo className="size-12" />
             <TextLogo className="text-3xl" />
           </div>
         </div>
