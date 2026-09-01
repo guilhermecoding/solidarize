@@ -1,3 +1,7 @@
+import Mail01Icon from "@hugeicons/core-free-icons/Mail01Icon";
+import SquareLock01Icon from "@hugeicons/core-free-icons/SquareLock01Icon";
+import { HugeiconsIcon } from "@hugeicons/react";
+
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,7 +25,13 @@ export function LoginForm({
         </div>
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
-          <Input id="email" type="email" placeholder="m@example.com" required />
+          <Input
+            id="email"
+            type="email"
+            placeholder="m@example.com"
+            required
+            startIcon={<HugeiconsIcon icon={Mail01Icon} strokeWidth={1.5} />}
+          />
         </Field>
         <Field>
           <div className="flex items-center">
@@ -33,7 +43,12 @@ export function LoginForm({
               Forgot your password?
             </a>
           </div>
-          <Input id="password" type="password" required />
+          <Input
+            id="password"
+            type="password"
+            required
+            startIcon={<HugeiconsIcon icon={SquareLock01Icon} strokeWidth={1.5} />}
+          />
         </Field>
         <Field>
           <Button type="submit">Login</Button>
