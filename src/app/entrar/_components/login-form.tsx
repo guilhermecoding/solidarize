@@ -14,6 +14,7 @@ import {
   FieldLabel
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { LoginCircle02Icon } from "@hugeicons/core-free-icons";
 
 export function LoginForm({
   className,
@@ -29,7 +30,8 @@ export function LoginForm({
     <form className={cn("flex flex-col gap-6", className)} {...props}>
       <FieldGroup>
         <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-young-serif">Boas-vindas</h1>
+          <h1 className="text-2xl font-young-serif">Boas-vindas!</h1>
+          <p className="text-sm text-muted-foreground">Entre para fazer o bem</p>
         </div>
         <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -66,6 +68,7 @@ export function LoginForm({
         </Field>
         <Field>
           <Button type="submit" loadingText="Entrando...">
+            <HugeiconsIcon icon={LoginCircle02Icon} strokeWidth={2} className="size-5 scale-x-[-1]" />
             Entrar
           </Button>
         </Field>

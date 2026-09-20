@@ -66,7 +66,7 @@ function Button({
     >
       {loading ? (
         <>
-          <Spinner aria-hidden />
+          <Spinner className="size-4.5 mr-1" aria-hidden />
           {loadingText}
         </>
       ) : (
