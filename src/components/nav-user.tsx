@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import {
   Avatar,
   AvatarFallback,
@@ -59,6 +59,12 @@ export function NavUser({
   const [signingOut, setSigningOut] = useState(false);
   const themeSelectOpenRef = useRef(false);
 
+  useLayoutEffect(() => {
+    return () => {
+      setSigningOut(false);
+    };
+  }, []);
+
   const handleSignOut = async () => {
     if (signingOut) {
       return;
@@ -66,16 +72,20 @@ export function NavUser({
 
     setSigningOut(true);
 
-    await signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          router.replace("/entrar");
+    try {
+      await signOut({
+        fetchOptions: {
+          onSuccess: () => {
+            router.replace("/entrar");
+          },
+          onError: () => {
+            setSigningOut(false);
+          },
         },
-        onError: () => {
-          setSigningOut(false);
-        },
-      },
-    });
+      });
+    } catch {
+      setSigningOut(false);
+    }
   };
 
   return (
