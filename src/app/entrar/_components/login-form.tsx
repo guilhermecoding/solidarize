@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAction } from "next-safe-action/hooks";
 import Mail01Icon from "@hugeicons/core-free-icons/Mail01Icon";
 import SquareLock01Icon from "@hugeicons/core-free-icons/SquareLock01Icon";
 import ViewIcon from "@hugeicons/core-free-icons/ViewIcon";
@@ -15,7 +16,33 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { LoginCircle02Icon } from "@hugeicons/core-free-icons";
-import { signIn } from "@/lib/auth-client";
+import { loginAction } from "@/app/entrar/action";
+
+function firstValidationMessage(validationErrors: unknown): string | undefined {
+  if (!validationErrors || typeof validationErrors !== "object") {
+    return undefined;
+  }
+
+  const record = validationErrors as Record<string, unknown>;
+  const formErrors = record._errors;
+
+  if (Array.isArray(formErrors) && typeof formErrors[0] === "string") {
+    return formErrors[0];
+  }
+
+  for (const value of Object.values(record)) {
+    if (!value || typeof value !== "object" || !("_errors" in value)) {
+      continue;
+    }
+
+    const fieldErrors = (value as { _errors?: unknown })._errors;
+    if (Array.isArray(fieldErrors) && typeof fieldErrors[0] === "string") {
+      return fieldErrors[0];
+    }
+  }
+
+  return undefined;
+}
 
 export function LoginForm({
   className,
@@ -23,36 +50,42 @@ export function LoginForm({
 }: React.ComponentProps<"form">) {
   const router = useRouter();
   const [viewPassword, setViewPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const { execute, isPending } = useAction(loginAction, {
+    onExecute: () => {
+      setError(null);
+    },
+    onSuccess: ({ data }) => {
+      if (!data.ok) {
+        setError(data.message);
+        return;
+      }
+
+      router.replace("/inicio");
+      router.refresh();
+    },
+    onError: ({ error: actionError }) => {
+      setError(
+        actionError.serverError
+          ?? firstValidationMessage(actionError.validationErrors)
+          ?? "Não foi possível entrar."
+      );
+    },
+  });
 
   const handleViewPassword = () => {
     setViewPassword((visible) => !visible);
   };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError(null);
-    setLoading(true);
 
     const formData = new FormData(event.currentTarget);
-    const email = String(formData.get("email") ?? "").trim();
-    const password = String(formData.get("password") ?? "");
-
-    const { error: signInError } = await signIn.email({
-      email,
-      password,
-      callbackURL: "/inicio",
+    execute({
+      email: String(formData.get("email") ?? "").trim(),
+      password: String(formData.get("password") ?? ""),
     });
-
-    if (signInError) {
-      setError(signInError.message ?? "Não foi possível entrar.");
-      setLoading(false);
-      return;
-    }
-
-    router.replace("/inicio");
-    router.refresh();
   };
 
   return (
@@ -75,7 +108,7 @@ export function LoginForm({
             placeholder="Email"
             autoComplete="email"
             required
-            disabled={loading}
+            disabled={isPending}
             startIcon={<HugeiconsIcon icon={Mail01Icon} strokeWidth={1.5} />}
           />
         </Field>
@@ -88,7 +121,7 @@ export function LoginForm({
             placeholder="Senha"
             autoComplete="current-password"
             required
-            disabled={loading}
+            disabled={isPending}
             startIcon={<HugeiconsIcon icon={SquareLock01Icon} strokeWidth={1.5} />}
             endIcon={
               <button
@@ -111,7 +144,7 @@ export function LoginForm({
           </p>
         ) : null}
         <Field>
-          <Button type="submit" loading={loading} loadingText="Entrando...">
+          <Button type="submit" loading={isPending} loadingText="Entrando...">
             <HugeiconsIcon icon={LoginCircle02Icon} strokeWidth={2} className="size-5 scale-x-[-1]" />
             Entrar
           </Button>
