@@ -10,8 +10,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
-  Field, FieldGroup,
-  FieldLabel
+  Field, FieldGroup
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { LoginCircle02Icon } from "@hugeicons/core-free-icons";
@@ -34,21 +33,21 @@ export function LoginForm({
           <p className="text-sm text-muted-foreground">Entre para fazer o bem</p>
         </div>
         <Field>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
+
           <Input
             id="email"
             type="email"
-            placeholder="seu@email.com"
+            placeholder="Email"
             required
             startIcon={<HugeiconsIcon icon={Mail01Icon} strokeWidth={1.5} />}
           />
         </Field>
         <Field>
-          <FieldLabel htmlFor="password">Senha</FieldLabel>
+
           <Input
             id="password"
             type={viewPassword ? "text" : "password"}
-            placeholder="••••••••"
+            placeholder="Senha"
             required
             startIcon={<HugeiconsIcon icon={SquareLock01Icon} strokeWidth={1.5} />}
             endIcon={
