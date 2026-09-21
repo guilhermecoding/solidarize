@@ -19,21 +19,21 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { MoreHorizontalCircle01Icon, FolderIcon, Share03Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 
-export function NavProjects({
-  projects,
+export function NavManagement({
+  items,
 }: {
-  projects: {
+  items: {
     name: string
     url: string
-    icon: React.ReactNode
-  }[]
+    icon: React.ReactNode;
+  }[];
 }) {
   const { isMobile } = useSidebar();
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel>Projects</SidebarGroupLabel>
       <SidebarMenu>
-        {projects.map((item) => (
+        {items.map((item) => (
           <SidebarMenuItem key={item.name}>
             <SidebarMenuButton render={<a href={item.url} />}>
               {item.icon}
