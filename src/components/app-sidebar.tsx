@@ -14,7 +14,10 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ChartRingIcon, CropIcon, PieChartIcon, MapsIcon, CommandIcon } from "@hugeicons/core-free-icons";
+import { ChartRingIcon } from "@hugeicons/core-free-icons";
+import { navManagement } from "@/app/(sistema)/_config/nav-management";
+import IconLogo from "./logo/icon-logo";
+import TextLogo from "./logo/text-logo";
 
 const data = {
   navSecondary: [
@@ -26,29 +29,6 @@ const data = {
       ),
     },
   ],
-  management: [
-    {
-      name: "Design Engineering",
-      url: "#",
-      icon: (
-        <HugeiconsIcon icon={CropIcon} strokeWidth={2} />
-      ),
-    },
-    {
-      name: "Sales & Marketing",
-      url: "#",
-      icon: (
-        <HugeiconsIcon icon={PieChartIcon} strokeWidth={2} />
-      ),
-    },
-    {
-      name: "Travel",
-      url: "#",
-      icon: (
-        <HugeiconsIcon icon={MapsIcon} strokeWidth={2} />
-      ),
-    },
-  ],
 };
 
 export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
@@ -57,13 +37,10 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<a href="#" />}>
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-                <HugeiconsIcon icon={CommandIcon} strokeWidth={2} className="size-4" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">Acme Inc</span>
-                <span className="truncate text-xs">Enterprise</span>
+            <SidebarMenuButton size="lg" render={<a href="#" />} className="flex justify-center" >
+              <div className="flex items-center gap-2">
+                <IconLogo className="size-8" />
+                <TextLogo className="text-xl" />
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -71,7 +48,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         {/* <NavMain items={data.navMain} /> */}
-        <NavManagement items={data.management} />
+        <NavManagement items={navManagement} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
