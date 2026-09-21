@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef, useState } from "react";
 import {
   Avatar,
   AvatarFallback,
@@ -20,8 +21,9 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { ThemeSelect } from "@/components/theme-select";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { UnfoldMoreIcon, SparklesIcon, CheckmarkBadgeIcon, CreditCardIcon, NotificationIcon, LogoutIcon } from "@hugeicons/core-free-icons";
+import { UnfoldMoreIcon, SparklesIcon, CheckmarkBadgeIcon, CreditCardIcon, NotificationIcon, LogoutIcon, PaintBoardIcon } from "@hugeicons/core-free-icons";
 
 export function NavUser({
   user,
@@ -33,10 +35,21 @@ export function NavUser({
   }
 }) {
   const { isMobile } = useSidebar();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const themeSelectOpenRef = useRef(false);
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
+        <DropdownMenu
+          open={menuOpen}
+          onOpenChange={(open) => {
+            if (!open && themeSelectOpenRef.current) {
+              return;
+            }
+            setMenuOpen(open);
+          }}
+        >
           <DropdownMenuTrigger
             render={
               <SidebarMenuButton size="lg" className="aria-expanded:bg-muted" />
@@ -94,6 +107,18 @@ export function NavUser({
                 Notifications
               </DropdownMenuItem>
             </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <div className="flex items-center gap-2.5 rounded-xl px-3 py-2">
+              <HugeiconsIcon icon={PaintBoardIcon} strokeWidth={2} className="size-4 shrink-0" />
+              <span className="text-sm">Tema</span>
+              <div className="ml-auto">
+                <ThemeSelect
+                  onOpenChange={(open) => {
+                    themeSelectOpenRef.current = open;
+                  }}
+                />
+              </div>
+            </div>
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <HugeiconsIcon icon={LogoutIcon} strokeWidth={2} />
