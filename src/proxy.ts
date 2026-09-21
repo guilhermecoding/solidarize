@@ -5,17 +5,25 @@ import { auth } from "@/lib/auth";
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    if (
-        pathname === "/entrar" ||
-        pathname.startsWith("/entrar/") ||
-        pathname.startsWith("/api/auth")
-    ) {
+    const isLoginRoute =
+        pathname === "/entrar" || pathname.startsWith("/entrar/");
+    const isAuthApi = pathname.startsWith("/api/auth");
+
+    if (isAuthApi) {
         return NextResponse.next();
     }
 
     const session = await auth.api.getSession({
         headers: await headers()
     });
+
+    if (isLoginRoute) {
+        if (session) {
+            return NextResponse.redirect(new URL("/inicio", request.url));
+        }
+
+        return NextResponse.next();
+    }
 
     if (!session) {
         return NextResponse.redirect(new URL("/entrar", request.url));
