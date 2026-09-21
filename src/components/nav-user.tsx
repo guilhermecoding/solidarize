@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/sidebar";
 import { ThemeSelect } from "@/components/theme-select";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { UnfoldMoreIcon, LogoutIcon, PaintBoardIcon } from "@hugeicons/core-free-icons";
+import { UnfoldMoreIcon, PaintBoardIcon, LogoutCircle02Icon } from "@hugeicons/core-free-icons";
 import { useRouter } from "next/navigation";
 import { signOut } from "@/lib/auth-client";
 
@@ -152,8 +152,12 @@ export function NavUser({
               </div>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem disabled={signingOut} onClick={handleSignOut}>
-              <HugeiconsIcon icon={LogoutIcon} strokeWidth={2} />
+            <DropdownMenuItem
+              disabled={signingOut}
+              onClick={handleSignOut}
+              variant="destructive"
+            >
+              <HugeiconsIcon icon={LogoutCircle02Icon} strokeWidth={2} />
               Sair
             </DropdownMenuItem>
           </DropdownMenuContent>
