@@ -10,6 +10,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  schemas = ["public", "system-auth"]
 }
 
 model User {
@@ -18,29 +19,42 @@ model User {
   email         String
   emailVerified Boolean   @default(false)
   image         String?
+  cpf           String
+  contact       String
+  dateOfBirth   DateTime
+  address       String?
+  role          String    @default("member")
+  banned        Boolean   @default(false)
+  banReason     String?
+  banExpires    DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
 
   @@unique([email])
+  @@unique([cpf])
+  @@index([role])
   @@map("user")
+  @@schema("system-auth")
 }
 
 model Session {
-  id        String   @id
-  expiresAt DateTime
-  token     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  ipAddress String?
-  userAgent String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id
+  expiresAt      DateTime
+  token          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  impersonatedBy String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([token])
   @@index([userId])
   @@map("session")
+  @@schema("system-auth")
 }
 
 model Account {
@@ -61,6 +75,7 @@ model Account {
 
   @@index([userId])
   @@map("account")
+  @@schema("system-auth")
 }
 
 model Verification {
@@ -71,6 +86,7 @@ model Verification {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@index([identifier])
+  @@index([identifier]) 
   @@map("verification")
+  @@schema("system-auth")
 }

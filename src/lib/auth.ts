@@ -1,8 +1,9 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import prisma from "@/lib/prisma";
 import { nextCookies } from "better-auth/next-js";
-
+import { admin } from "better-auth/plugins";
+import prisma from "@/lib/prisma";
+import { ac, adminRole, memberRole } from "@/lib/auth-permissions";
 
 const trustedOrigins = [
     "http://localhost:3000",
@@ -19,8 +20,38 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
     },
+    user: {
+        additionalFields: {
+            cpf: {
+                type: "string",
+                required: true,
+                unique: true,
+            },
+            contact: {
+                type: "string",
+                required: true,
+            },
+            dateOfBirth: {
+                type: "date",
+                required: true,
+            },
+            address: {
+                type: "string",
+                required: false,
+            },
+        },
+    },
     trustedOrigins,
     plugins: [
+        admin({
+            defaultRole: "member",
+            adminRoles: ["admin"],
+            ac,
+            roles: {
+                admin: adminRole,
+                member: memberRole,
+            },
+        }),
         nextCookies(),
     ],
 });
