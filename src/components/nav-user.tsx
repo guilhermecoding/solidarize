@@ -24,6 +24,8 @@ import {
 import { ThemeSelect } from "@/components/theme-select";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { UnfoldMoreIcon, SparklesIcon, CheckmarkBadgeIcon, CreditCardIcon, NotificationIcon, LogoutIcon, PaintBoardIcon } from "@hugeicons/core-free-icons";
+import { useRouter } from "next/navigation";
+import { signOut } from "@/lib/auth-client";
 
 export function NavUser({
   user,
@@ -34,9 +36,30 @@ export function NavUser({
     avatar: string
   }
 }) {
+  const router = useRouter();
   const { isMobile } = useSidebar();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const themeSelectOpenRef = useRef(false);
+
+  const handleSignOut = async () => {
+    if (signingOut) {
+      return;
+    }
+
+    setSigningOut(true);
+
+    await signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          router.replace("/entrar");
+        },
+        onError: () => {
+          setSigningOut(false);
+        },
+      },
+    });
+  };
 
   return (
     <SidebarMenu>
@@ -120,7 +143,7 @@ export function NavUser({
               </div>
             </div>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem disabled={signingOut} onClick={handleSignOut}>
               <HugeiconsIcon icon={LogoutIcon} strokeWidth={2} />
               Log out
             </DropdownMenuItem>
