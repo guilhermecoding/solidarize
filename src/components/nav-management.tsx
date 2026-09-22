@@ -17,13 +17,13 @@ export function NavManagement({
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-      <SidebarGroupLabel className="text-sm font-medium">Gestão</SidebarGroupLabel>
+      <SidebarGroupLabel className="font-medium">GESTÃO</SidebarGroupLabel>
       <SidebarMenu>
         {items.map((item) => (
           <SidebarMenuItem key={item.name}>
             <Link href={item.url} className="flex items-center gap-2 ml-2">
-              <HugeiconsIcon icon={item.icon} strokeWidth={2} className="size-5!" />
-              <span className="text-lg">{item.name}</span></Link>
+              <HugeiconsIcon icon={item.icon} strokeWidth={2} className="size-5! opacity-80 hover:opacity-100" />
+              <span className="text-foreground/80 hover:text-foreground">{item.name}</span></Link>
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
