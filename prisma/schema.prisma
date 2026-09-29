@@ -24,6 +24,7 @@ model User {
   dateOfBirth   DateTime
   address       String?
   role          String    @default("member")
+  permission    String    @default("read")
   banned        Boolean   @default(false)
   banReason     String?
   banExpires    DateTime?
