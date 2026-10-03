@@ -370,7 +370,7 @@ function ChoiceField({
     return (
         <Field data-invalid={invalid || undefined}>
             <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
-            <Select value={field.state.value} onValueChange={onChange}>
+            <Select value={field.state.value} items={options} onValueChange={onChange}>
                 <SelectTrigger
                     id={field.name}
                     className="h-12 w-full rounded-2xl px-5 text-base"
