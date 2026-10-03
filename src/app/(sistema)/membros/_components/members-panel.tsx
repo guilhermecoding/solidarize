@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Add01Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Edit03Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { MemberCredentialsDialog } from "@/app/(sistema)/membros/_components/member-credentials-dialog";
@@ -120,12 +120,12 @@ export function MembersPanel({ members, canWrite: initialCanWrite }: MembersPane
                                         <TableCell>
                                             <Button
                                                 type="button"
-                                                variant="outline"
+                                                variant="ghost"
                                                 size="sm"
+                                                className="text-muted-foreground hover:text-foreground"
                                                 onClick={() => openEdit(member)}
                                             >
-                                                <HugeiconsIcon icon={PencilEdit01Icon} strokeWidth={2} />
-                                                Editar
+                                                <HugeiconsIcon icon={Edit03Icon} strokeWidth={2} className="size-5" />
                                             </Button>
                                         </TableCell>
                                     ) : null}
