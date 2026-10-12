@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Add01Icon, Edit03Icon, PencilEdit01Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Edit03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { MemberCredentialsDialog } from "@/app/(sistema)/membros/_components/member-credentials-dialog";
@@ -78,62 +78,64 @@ export function MembersPanel({ members, canWrite: initialCanWrite }: MembersPane
                         </Button>
                     </div>
                 ) : null}
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Nome</TableHead>
-                            <TableHead>CPF</TableHead>
-                            <TableHead>Papel</TableHead>
-                            <TableHead>Acesso</TableHead>
-                            <TableHead>Permissão</TableHead>
-                            {canWrite ? <TableHead>Editar</TableHead> : null}
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {members.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={canWrite ? 6 : 5} className="text-muted-foreground">
-                                    Nenhum membro encontrado.
-                                </TableCell>
+                <div className="overflow-hidden rounded-xl border bg-background">
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="hover:bg-transparent">
+                                <TableHead>Nome</TableHead>
+                                <TableHead>CPF</TableHead>
+                                <TableHead>Papel</TableHead>
+                                <TableHead>Acesso</TableHead>
+                                <TableHead>Permissão</TableHead>
+                                {canWrite ? <TableHead>Editar</TableHead> : null}
                             </TableRow>
-                        ) : (
-                            members.map((member) => (
-                                <TableRow key={member.id}>
-                                    <TableCell className="whitespace-normal font-medium">{member.name}</TableCell>
-                                    <TableCell>{member.cpf}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={member.role === "admin" ? "default" : "secondary"}>
-                                            {userRoleLabels[member.role]}
-                                        </Badge>
+                        </TableHeader>
+                        <TableBody>
+                            {members.length === 0 ? (
+                                <TableRow>
+                                    <TableCell colSpan={canWrite ? 6 : 5} className="text-muted-foreground">
+                                        Nenhum membro encontrado.
                                     </TableCell>
-                                    <TableCell>
-                                        <Badge variant={member.access === "active" ? "success" : "muted"}>
-                                            {userAccessLabels[member.access]}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant={member.permission === "full" ? "default" : "outline"}>
-                                            {userPermissionLabels[member.permission]}
-                                        </Badge>
-                                    </TableCell>
-                                    {canWrite ? (
-                                        <TableCell>
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-muted-foreground hover:text-foreground"
-                                                onClick={() => openEdit(member)}
-                                            >
-                                                <HugeiconsIcon icon={Edit03Icon} strokeWidth={2} className="size-5" />
-                                            </Button>
-                                        </TableCell>
-                                    ) : null}
                                 </TableRow>
-                            ))
-                        )}
-                    </TableBody>
-                </Table>
+                            ) : (
+                                members.map((member) => (
+                                    <TableRow key={member.id} className="odd:bg-background even:bg-muted/50">
+                                        <TableCell className="whitespace-normal font-medium">{member.name}</TableCell>
+                                        <TableCell>{member.cpf}</TableCell>
+                                        <TableCell>
+                                            <Badge variant={member.role === "admin" ? "default" : "secondary"}>
+                                                {userRoleLabels[member.role]}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant={member.access === "active" ? "success" : "muted"}>
+                                                {userAccessLabels[member.access]}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant={member.permission === "full" ? "default" : "outline"}>
+                                                {userPermissionLabels[member.permission]}
+                                            </Badge>
+                                        </TableCell>
+                                        {canWrite ? (
+                                            <TableCell>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    className="text-muted-foreground hover:text-foreground"
+                                                    onClick={() => openEdit(member)}
+                                                >
+                                                    <HugeiconsIcon icon={Edit03Icon} strokeWidth={2} className="size-5" />
+                                                </Button>
+                                            </TableCell>
+                                        ) : null}
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </div>
             </div>
             <MemberDrawer
                 open={drawerOpen}
