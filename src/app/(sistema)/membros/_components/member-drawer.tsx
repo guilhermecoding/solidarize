@@ -101,7 +101,7 @@ export function MemberDrawer({
                 } as React.CSSProperties : undefined}
             >
                 <DrawerHeader>
-                    <DrawerTitle>{member ? "Editar membro" : "Adicionar membro"}</DrawerTitle>
+                    <DrawerTitle className="text-xl font-bold">{member ? "Editar Membro" : "Adicionar Membro"}</DrawerTitle>
                     <DrawerDescription>
                         {member
                             ? "Atualize os dados e o acesso deste membro."
@@ -183,18 +183,18 @@ function MemberForm({
                 }}
             >
                 <FieldGroup>
-                    <div className="flex flex-row gap-2">
-                        <form.Field name="name">
-                            {(field) => (
-                                <TextField
-                                    field={field}
-                                    label="Nome"
-                                    autoComplete="name"
-                                    attempts={submissionAttempts}
-                                    className="min-w-96 w-full"
-                                />
-                            )}
-                        </form.Field>
+                    <form.Field name="name">
+                        {(field) => (
+                            <TextField
+                                field={field}
+                                label="Nome Completo"
+                                autoComplete="name"
+                                placeholder="Ex: João da Silva"
+                                attempts={submissionAttempts}
+                            />
+                        )}
+                    </form.Field>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <form.Field name="cpf">
                             {(field) => (
                                 <TextField
@@ -208,32 +208,48 @@ function MemberForm({
                                 />
                             )}
                         </form.Field>
+                        <form.Field name="email">
+                            {(field) => (
+                                <TextField
+                                    field={field}
+                                    label="E-mail"
+                                    type="email"
+                                    inputMode="email"
+                                    autoComplete="email"
+                                    placeholder="exemplo@email.com"
+                                    attempts={submissionAttempts}
+                                />
+                            )}
+                        </form.Field>
                     </div>
-                    <form.Field name="email">
-                        {(field) => (
-                            <TextField
-                                field={field}
-                                label="E-mail"
-                                type="email"
-                                inputMode="email"
-                                autoComplete="email"
-                                attempts={submissionAttempts}
-                            />
-                        )}
-                    </form.Field>
-                    <form.Field name="contact">
-                        {(field) => (
-                            <TextField
-                                field={field}
-                                label="Contato"
-                                inputMode="tel"
-                                autoComplete="tel"
-                                placeholder="(00) 00000-0000"
-                                attempts={submissionAttempts}
-                                format={formatContact}
-                            />
-                        )}
-                    </form.Field>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <form.Field name="contact">
+                            {(field) => (
+                                <TextField
+                                    field={field}
+                                    label="Contato"
+                                    inputMode="tel"
+                                    autoComplete="tel"
+                                    placeholder="(00) 00000-0000"
+                                    attempts={submissionAttempts}
+                                    format={formatContact}
+                                />
+                            )}
+                        </form.Field>
+                        <form.Field name="dateOfBirth">
+                            {(field) => (
+                                <TextField
+                                    field={field}
+                                    label="Data de nascimento"
+                                    inputMode="numeric"
+                                    autoComplete="bday"
+                                    placeholder="DD/MM/AAAA"
+                                    attempts={submissionAttempts}
+                                    format={formatDateOfBirthInput}
+                                />
+                            )}
+                        </form.Field>
+                    </div>
                     <form.Field name="address">
                         {(field) => (
                             <TextField
@@ -241,19 +257,6 @@ function MemberForm({
                                 label="Endereço"
                                 autoComplete="street-address"
                                 attempts={submissionAttempts}
-                            />
-                        )}
-                    </form.Field>
-                    <form.Field name="dateOfBirth">
-                        {(field) => (
-                            <TextField
-                                field={field}
-                                label="Data de nascimento"
-                                inputMode="numeric"
-                                autoComplete="bday"
-                                placeholder="DD/MM/AAAA"
-                                attempts={submissionAttempts}
-                                format={formatDateOfBirthInput}
                             />
                         )}
                     </form.Field>
