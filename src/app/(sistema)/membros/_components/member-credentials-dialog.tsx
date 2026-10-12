@@ -14,7 +14,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { notify } from "@/app/(sistema)/membros/_components/notify";
+import { notify } from "@/lib/notify";
 
 type MemberCredentialsDialogProps = {
     open: boolean;

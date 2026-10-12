@@ -4,7 +4,7 @@ import { useForm, useStore } from "@tanstack/react-form";
 import { useAction } from "next-safe-action/hooks";
 
 import { createMemberAction, updateMemberAction } from "@/app/(sistema)/membros/action";
-import { notify } from "@/app/(sistema)/membros/_components/notify";
+import { notify } from "@/lib/notify";
 import { memberFormSchema, type MemberFormValues } from "@/app/(sistema)/membros/schema";
 import { Button } from "@/components/ui/button";
 import {

@@ -7,7 +7,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 import { MemberCredentialsDialog } from "@/app/(sistema)/membros/_components/member-credentials-dialog";
 import { MemberDrawer } from "@/app/(sistema)/membros/_components/member-drawer";
-import { notify } from "@/app/(sistema)/membros/_components/notify";
+import { notify } from "@/lib/notify";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
