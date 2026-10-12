@@ -14,5 +14,11 @@ export async function MembersSection() {
 
     const members = await listMembers();
 
-    return <MembersPanel members={members} canWrite={hasWriteAccess(user)} />;
+    return (
+        <MembersPanel
+            members={members}
+            canWrite={hasWriteAccess(user)}
+            currentUserId={user.id}
+        />
+    );
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Add01Icon, Edit03Icon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Edit03Icon, SearchAlertIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { MemberCredentialsDialog } from "@/app/(sistema)/membros/_components/member-credentials-dialog";
@@ -30,9 +30,10 @@ import {
 type MembersPanelProps = {
     members: Member[];
     canWrite: boolean;
+    currentUserId: string;
 };
 
-export function MembersPanel({ members, canWrite: initialCanWrite }: MembersPanelProps) {
+export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId }: MembersPanelProps) {
     const router = useRouter();
     const access = useMemberAccess();
     const canWrite = access.isPending ? initialCanWrite : access.canWrite;
@@ -94,13 +95,23 @@ export function MembersPanel({ members, canWrite: initialCanWrite }: MembersPane
                             {members.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={canWrite ? 6 : 5} className="text-muted-foreground">
-                                        Nenhum membro encontrado.
+                                        <div className="flex flex-col items-center gap-4 py-12">
+                                            <HugeiconsIcon icon={SearchAlertIcon} strokeWidth={2} className="size-10 md:size-12" />
+                                            <span className="text-sm font-medium md:text-lg">Nenhum membro encontrado</span>
+                                        </div>
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 members.map((member) => (
                                     <TableRow key={member.id} className="odd:bg-background even:bg-muted/50">
-                                        <TableCell className="whitespace-normal font-medium">{member.name}</TableCell>
+                                        <TableCell className="whitespace-normal font-medium">
+                                            <span className="inline-flex flex-wrap items-center gap-2">
+                                                {member.name}
+                                                {member.id === currentUserId ? (
+                                                    <Badge variant="outline">Você</Badge>
+                                                ) : null}
+                                            </span>
+                                        </TableCell>
                                         <TableCell>{member.cpf}</TableCell>
                                         <TableCell>
                                             <Badge variant={member.role === "admin" ? "default" : "secondary"}>
