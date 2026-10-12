@@ -8,6 +8,15 @@ import { notify } from "@/lib/notify";
 import { memberFormSchema, type MemberFormValues } from "@/app/(sistema)/membros/schema";
 import { Button } from "@/components/ui/button";
 import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
     Drawer,
     DrawerClose,
     DrawerContent,
@@ -78,53 +87,68 @@ export function MemberDrawer({
     onUpdated,
 }: MemberDrawerProps) {
     const isMobile = useIsMobile();
+    const title = member ? "Editar Membro" : "Adicionar Membro";
+    const description = member
+        ? "Atualize os dados e o acesso deste membro."
+        : "Preencha os dados para criar o acesso do membro.";
+    const form = (
+        <MemberForm
+            key={member?.id ?? "new"}
+            member={member}
+            surface={isMobile ? "drawer" : "dialog"}
+            onCreated={onCreated}
+            onUpdated={onUpdated}
+        />
+    );
+
+    if (isMobile) {
+        return (
+            <Drawer
+                open={open}
+                onOpenChange={onOpenChange}
+                swipeDirection="down"
+                snapPoints={[1]}
+                showSwipeHandle
+            >
+                <DrawerContent
+                    className="rounded-none"
+                    style={{
+                        "--drawer-content-height": "100dvh",
+                        "--drawer-content-max-height": "100dvh",
+                        "--drawer-inset": "0px",
+                    } as React.CSSProperties}
+                >
+                    <DrawerHeader>
+                        <DrawerTitle className="text-xl font-bold">{title}</DrawerTitle>
+                        <DrawerDescription>{description}</DrawerDescription>
+                    </DrawerHeader>
+                    {form}
+                </DrawerContent>
+            </Drawer>
+        );
+    }
 
     return (
-        <Drawer
-            key={isMobile ? "mobile" : "desktop"}
-            open={open}
-            onOpenChange={onOpenChange}
-            swipeDirection={isMobile ? "down" : "right"}
-            snapPoints={isMobile ? [1] : undefined}
-            showSwipeHandle={isMobile}
-        >
-            <DrawerContent
-                className={
-                    isMobile
-                        ? "rounded-none"
-                        : "data-[swipe-axis=x]:sm:[--drawer-content-width:clamp(24rem,40vw,36rem)]"
-                }
-                style={isMobile ? {
-                    "--drawer-content-height": "100dvh",
-                    "--drawer-content-max-height": "100dvh",
-                    "--drawer-inset": "0px",
-                } as React.CSSProperties : undefined}
-            >
-                <DrawerHeader>
-                    <DrawerTitle className="text-xl font-bold">{member ? "Editar Membro" : "Adicionar Membro"}</DrawerTitle>
-                    <DrawerDescription>
-                        {member
-                            ? "Atualize os dados e o acesso deste membro."
-                            : "Preencha os dados para criar o acesso do membro."}
-                    </DrawerDescription>
-                </DrawerHeader>
-                <MemberForm
-                    key={member?.id ?? "new"}
-                    member={member}
-                    onCreated={onCreated}
-                    onUpdated={onUpdated}
-                />
-            </DrawerContent>
-        </Drawer>
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(64rem,calc(100%-2rem))]">
+                <DialogHeader className="shrink-0 px-6 pt-6 pr-14">
+                    <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
+                    <DialogDescription>{description}</DialogDescription>
+                </DialogHeader>
+                {form}
+            </DialogContent>
+        </Dialog>
     );
 }
 
 function MemberForm({
     member,
+    surface,
     onCreated,
     onUpdated,
 }: {
     member: Member | null;
+    surface: "drawer" | "dialog";
     onCreated: (credentials: MemberCredentials, message: string) => void;
     onUpdated: (message: string) => void;
 }) {
@@ -175,7 +199,11 @@ function MemberForm({
         <>
             <form
                 id="member-form"
-                className="min-h-0 flex-1 overflow-y-auto px-4 py-4"
+                className={
+                    surface === "dialog"
+                        ? "min-h-0 flex-1 overflow-y-auto px-6 py-4"
+                        : "min-h-0 flex-1 overflow-y-auto px-4 py-4"
+                }
                 noValidate
                 onSubmit={(event) => {
                     event.preventDefault();
@@ -303,19 +331,35 @@ function MemberForm({
                     </form.Field>
                 </FieldGroup>
             </form>
-            <DrawerFooter>
-                <Button
-                    type="submit"
-                    form="member-form"
-                    loading={isPending}
-                    loadingText="Salvando"
-                >
-                    Salvar
-                </Button>
-                <DrawerClose render={<Button type="button" variant="outline" disabled={isPending} />}>
-                    Cancelar
-                </DrawerClose>
-            </DrawerFooter>
+            {surface === "dialog" ? (
+                <DialogFooter className="shrink-0 border-t px-6 py-4 sm:justify-end">
+                    <DialogClose render={<Button type="button" variant="outline" disabled={isPending} />}>
+                        Cancelar
+                    </DialogClose>
+                    <Button
+                        type="submit"
+                        form="member-form"
+                        loading={isPending}
+                        loadingText="Salvando"
+                    >
+                        Salvar
+                    </Button>
+                </DialogFooter>
+            ) : (
+                <DrawerFooter>
+                    <Button
+                        type="submit"
+                        form="member-form"
+                        loading={isPending}
+                        loadingText="Salvando"
+                    >
+                        Salvar
+                    </Button>
+                    <DrawerClose render={<Button type="button" variant="outline" disabled={isPending} />}>
+                        Cancelar
+                    </DrawerClose>
+                </DrawerFooter>
+            )}
         </>
     );
 }
