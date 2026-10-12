@@ -40,7 +40,7 @@ export function ThemeSelect({
       <SelectTrigger
         size="sm"
         aria-label="Tema"
-        className="min-w-28"
+        className="min-w-28 py-2"
       >
         <SelectValue />
       </SelectTrigger>
