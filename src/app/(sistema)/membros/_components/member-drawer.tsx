@@ -16,7 +16,14 @@ import {
     DrawerHeader,
     DrawerTitle,
 } from "@/components/ui/drawer";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+    Field,
+    FieldContent,
+    FieldDescription,
+    FieldError,
+    FieldGroup,
+    FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
     Select,
@@ -25,12 +32,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatContact } from "@/lib/validate-contact";
 import { formatCpf } from "@/lib/validate-cpf";
 import { formatDateOfBirthInput } from "@/lib/validate-date-of-birth";
 import {
-    userAccesses,
     userAccessLabels,
     userPermissionLabels,
     userPermissions,
@@ -263,20 +270,7 @@ function MemberForm({
                     </form.Field>
                     <form.Field name="access">
                         {(field) => (
-                            <ChoiceField
-                                field={field}
-                                label="Acesso"
-                                attempts={submissionAttempts}
-                                options={userAccesses.map((access) => ({
-                                    value: access,
-                                    label: userAccessLabels[access],
-                                }))}
-                                onChange={(value) => {
-                                    if (isUserAccess(value)) {
-                                        field.handleChange(value);
-                                    }
-                                }}
-                            />
+                            <AccessField field={field} attempts={submissionAttempts} />
                         )}
                     </form.Field>
                     <form.Field name="permission">
@@ -346,6 +340,39 @@ function TextField({
                 aria-invalid={invalid || undefined}
                 {...inputProps}
             />
+            <FieldError errors={errors} />
+        </Field>
+    );
+}
+
+function AccessField({
+    field,
+    attempts,
+}: {
+    field: MemberFieldApi<UserAccess>;
+    attempts: number;
+}) {
+    const errors = visibleErrors(field, attempts);
+    const invalid = errors.length > 0;
+
+    return (
+        <Field data-invalid={invalid || undefined}>
+            <div className="flex items-center justify-between gap-4">
+                <FieldContent>
+                    <FieldLabel htmlFor={field.name}>Acesso</FieldLabel>
+                    <FieldDescription>{userAccessLabels[field.state.value]}</FieldDescription>
+                </FieldContent>
+                <Switch
+                    id={field.name}
+                    className="data-checked:bg-emerald-600"
+                    checked={field.state.value === "active"}
+                    onCheckedChange={(checked) => {
+                        field.handleChange(checked ? "active" : "inactive");
+                    }}
+                    onBlur={field.handleBlur}
+                    aria-invalid={invalid || undefined}
+                />
+            </div>
             <FieldError errors={errors} />
         </Field>
     );
@@ -455,10 +482,6 @@ function toFormValues(member: Member): MemberFormValues {
 
 function isUserRole(value: string | null): value is UserRole {
     return userRoles.some((role) => role === value);
-}
-
-function isUserAccess(value: string | null): value is UserAccess {
-    return userAccesses.some((access) => access === value);
 }
 
 function isUserPermission(value: string | null): value is UserPermission {
