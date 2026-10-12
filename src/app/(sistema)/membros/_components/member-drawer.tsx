@@ -41,7 +41,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatContact } from "@/lib/validate-contact";
@@ -61,7 +60,7 @@ import {
 } from "@/services/user/user.type";
 import SeparatorSection from "@/components/separator-section";
 import { HugeiconsIcon, IconSvgElement } from "@hugeicons/react";
-import { BirthdayCakeIcon, Call02Icon, IdCardIcon, Key01Icon, Location01Icon, Mail02Icon, PowerIcon, StarAward02Icon, StatusIcon, UserCircleIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
+import { BirthdayCakeIcon, Call02Icon, IdCardIcon, Key01Icon, Location01Icon, Mail02Icon, PowerIcon, StarAward02Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
 
 const emptyMemberFormValues: MemberFormValues = {
     name: "",
