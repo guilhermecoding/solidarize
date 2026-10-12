@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useAction } from "next-safe-action/hooks";
 
@@ -61,6 +62,17 @@ import {
 import SeparatorSection from "@/components/separator-section";
 import { HugeiconsIcon, IconSvgElement } from "@hugeicons/react";
 import { BirthdayCakeIcon, Call02Icon, IdCardIcon, Key01Icon, Location01Icon, Mail02Icon, PowerIcon, StarAward02Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+
+const takenFieldMessages = {
+    "Este CPF já está em uso.": {
+        field: "cpf",
+        message: "Alguém já possui este CPF!",
+    },
+    "Este e-mail já está em uso.": {
+        field: "email",
+        message: "Alguém já possui este email!",
+    },
+} as const;
 
 const emptyMemberFormValues: MemberFormValues = {
     name: "",
@@ -155,10 +167,24 @@ function MemberForm({
     onCreated: (credentials: MemberCredentials, message: string) => void;
     onUpdated: (message: string) => void;
 }) {
+    const [takenField, setTakenField] = useState<"cpf" | "email" | null>(null);
+
+    function showActionError(message: string) {
+        const taken = takenFieldMessages[message as keyof typeof takenFieldMessages];
+
+        if (!taken) {
+            setTakenField(null);
+            notify("error", message);
+            return;
+        }
+
+        setTakenField(taken.field);
+    }
+
     const { execute: createMember, isPending: isCreating } = useAction(createMemberAction, {
         onSuccess: ({ data }) => {
             if (!data.ok) {
-                notify("error", data.message);
+                showActionError(data.message);
                 return;
             }
 
@@ -171,7 +197,7 @@ function MemberForm({
     const { execute: updateMember, isPending: isUpdating } = useAction(updateMemberAction, {
         onSuccess: ({ data }) => {
             if (!data.ok) {
-                notify("error", data.message);
+                showActionError(data.message);
                 return;
             }
 
@@ -238,6 +264,10 @@ function MemberForm({
                                     attempts={submissionAttempts}
                                     format={formatCpf}
                                     icon={IdCardIcon}
+                                    serverError={takenField === "cpf" ? takenFieldMessages["Este CPF já está em uso."].message : undefined}
+                                    onEdit={() => {
+                                        setTakenField((current) => current === "cpf" ? null : current);
+                                    }}
                                 />
                             )}
                         </form.Field>
@@ -252,6 +282,10 @@ function MemberForm({
                                     placeholder="exemplo@email.com"
                                     attempts={submissionAttempts}
                                     icon={Mail02Icon}
+                                    serverError={takenField === "email" ? takenFieldMessages["Este e-mail já está em uso."].message : undefined}
+                                    onEdit={() => {
+                                        setTakenField((current) => current === "email" ? null : current);
+                                    }}
                                 />
                             )}
                         </form.Field>
@@ -388,6 +422,8 @@ function TextField({
     attempts,
     format,
     icon,
+    serverError,
+    onEdit,
     ...inputProps
 }: {
     field: MemberFieldApi<string>;
@@ -395,8 +431,13 @@ function TextField({
     attempts: number;
     format?: (value: string) => string;
     icon?: IconSvgElement;
+    serverError?: string;
+    onEdit?: () => void;
 } & Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "onBlur" | "id" | "name">) {
-    const errors = visibleErrors(field, attempts);
+    const errors = [
+        ...visibleErrors(field, attempts),
+        ...(serverError ? [{ message: serverError }] : []),
+    ];
     const invalid = errors.length > 0;
 
     return (
@@ -413,6 +454,7 @@ function TextField({
                 onChange={(event) => {
                     const nextValue = format ? format(event.target.value) : event.target.value;
                     field.handleChange(nextValue);
+                    onEdit?.();
                 }}
                 aria-invalid={invalid || undefined}
                 {...inputProps}
