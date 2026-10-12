@@ -89,7 +89,11 @@ export function MemberDrawer({
             showSwipeHandle={isMobile}
         >
             <DrawerContent
-                className={isMobile ? "rounded-none" : undefined}
+                className={
+                    isMobile
+                        ? "rounded-none"
+                        : "data-[swipe-axis=x]:sm:[--drawer-content-width:clamp(24rem,40vw,36rem)]"
+                }
                 style={isMobile ? {
                     "--drawer-content-height": "100dvh",
                     "--drawer-content-max-height": "100dvh",
@@ -179,29 +183,32 @@ function MemberForm({
                 }}
             >
                 <FieldGroup>
-                    <form.Field name="name">
-                        {(field) => (
-                            <TextField
-                                field={field}
-                                label="Nome"
-                                autoComplete="name"
-                                attempts={submissionAttempts}
-                            />
-                        )}
-                    </form.Field>
-                    <form.Field name="cpf">
-                        {(field) => (
-                            <TextField
-                                field={field}
-                                label="CPF"
-                                inputMode="numeric"
-                                autoComplete="off"
-                                placeholder="000.000.000-00"
-                                attempts={submissionAttempts}
-                                format={formatCpf}
-                            />
-                        )}
-                    </form.Field>
+                    <div className="flex flex-row gap-2">
+                        <form.Field name="name">
+                            {(field) => (
+                                <TextField
+                                    field={field}
+                                    label="Nome"
+                                    autoComplete="name"
+                                    attempts={submissionAttempts}
+                                    className="min-w-96 w-full"
+                                />
+                            )}
+                        </form.Field>
+                        <form.Field name="cpf">
+                            {(field) => (
+                                <TextField
+                                    field={field}
+                                    label="CPF"
+                                    inputMode="numeric"
+                                    autoComplete="off"
+                                    placeholder="000.000.000-00"
+                                    attempts={submissionAttempts}
+                                    format={formatCpf}
+                                />
+                            )}
+                        </form.Field>
+                    </div>
                     <form.Field name="email">
                         {(field) => (
                             <TextField
