@@ -2,9 +2,15 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 
-import { writeActionClient } from "@/lib/safe-action";
-import { USER_CACHE_TAG, createMember, updateMember } from "@/services/user/user.service";
-import { memberFormSchema, updateMemberSchema } from "./schema";
+import { readActionClient, writeActionClient } from "@/lib/safe-action";
+import { USER_CACHE_TAG, createMember, searchMembers, updateMember } from "@/services/user/user.service";
+import { memberFormSchema, searchMembersSchema, updateMemberSchema } from "./schema";
+
+export const searchMembersAction = readActionClient
+    .inputSchema(searchMembersSchema)
+    .action(async ({ parsedInput }) => {
+        return searchMembers(parsedInput.query.replace(/\s+/g, " "));
+    });
 
 export const createMemberAction = writeActionClient
     .inputSchema(memberFormSchema)

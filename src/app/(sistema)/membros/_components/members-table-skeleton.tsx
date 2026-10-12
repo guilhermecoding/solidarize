@@ -11,8 +11,9 @@ import {
 export function MembersTableSkeleton() {
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex justify-end">
-                <Skeleton className="h-12 w-36" />
+            <div className="flex items-center justify-end gap-3">
+                <Skeleton className="ml-auto h-12 w-full min-w-0 max-w-sm rounded-2xl" />
+                <Skeleton className="h-12 w-36 shrink-0 rounded-2xl" />
             </div>
             <div className="overflow-hidden rounded-xl border bg-background">
                 <Table>

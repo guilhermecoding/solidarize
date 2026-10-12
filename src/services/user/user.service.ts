@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { APIError } from "better-auth/api";
 
 import { serverFailure, serverSuccess, type ServerFailure, type ServerResponse } from "@/@types/server-response";
+import { Prisma } from "@/generated/prisma/client";
 import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { formatContact, normalizeContact } from "@/lib/validate-contact";
@@ -48,6 +49,8 @@ type MemberRecord = {
     permission: string;
 };
 
+const LIKE_ESCAPE = "\\";
+
 const memberSelect = {
     id: true,
     name: true,
@@ -73,6 +76,46 @@ export async function listMembers(): Promise<Member[]> {
     });
 
     return users.map(toMember);
+}
+
+export async function searchMembers(query: string): Promise<Member[]> {
+    "use cache";
+    cacheTag(USER_CACHE_TAG);
+    cacheLife("minutes");
+
+    const nameWords = query.match(/\p{L}+/gu) ?? [];
+    const digits = query.replace(/\D/g, "");
+
+    if (nameWords.length === 0 && digits.length === 0) {
+        return [];
+    }
+
+    const nameClause = nameWords.length > 0
+        ? Prisma.sql`(${Prisma.join(nameWords.map(nameWordClause), " AND ")})`
+        : Prisma.sql`FALSE`;
+    const cpfClause = digits.length > 0
+        ? Prisma.sql`cpf LIKE ${`%${digits}%`}`
+        : Prisma.sql`FALSE`;
+
+    const users = await prisma.$queryRaw<RawMemberRow[]>`
+        SELECT
+            id,
+            name,
+            email,
+            cpf,
+            contact,
+            "dateOfBirth",
+            address,
+            role,
+            banned,
+            "banExpires",
+            permission
+        FROM "system-auth"."user"
+        WHERE (${nameClause} OR ${cpfClause})
+        ORDER BY name ASC
+    `;
+
+    return users.map((user) => toMember(normalizeMemberRecord(user)));
 }
 
 export async function createMember(
@@ -368,6 +411,39 @@ function findCpfOwner(cpf: string) {
         where: { cpf },
         select: { id: true },
     });
+}
+
+function nameWordClause(word: string) {
+    return Prisma.sql`"system-auth".immutable_unaccent(lower(name)) LIKE ('%' || "system-auth".immutable_unaccent(lower(${escapeLike(word)})) || '%') ESCAPE ${LIKE_ESCAPE}`;
+}
+
+function escapeLike(value: string): string {
+    return value.replace(/[\\%_]/g, "\\$&");
+}
+
+type RawMemberRow = Omit<MemberRecord, "dateOfBirth" | "banExpires"> & {
+    dateOfBirth: Date | string;
+    banExpires: Date | string | null;
+};
+
+function normalizeMemberRecord(row: RawMemberRow): MemberRecord {
+    return {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        cpf: row.cpf,
+        contact: row.contact,
+        dateOfBirth: toDate(row.dateOfBirth),
+        address: row.address,
+        role: row.role,
+        banned: row.banned,
+        banExpires: row.banExpires ? toDate(row.banExpires) : null,
+        permission: row.permission,
+    };
+}
+
+function toDate(value: Date | string): Date {
+    return value instanceof Date ? value : new Date(value);
 }
 
 function toMember(user: MemberRecord): Member {

@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Add01Icon, Edit03Icon, SearchAlertIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, Edit03Icon, Search01Icon, SearchAlertIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
+import { searchMembersAction } from "@/app/(sistema)/membros/action";
 import { MemberCredentialsDialog } from "@/app/(sistema)/membros/_components/member-credentials-dialog";
 import { MemberDrawer } from "@/app/(sistema)/membros/_components/member-drawer";
 import { notify } from "@/lib/notify";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
     Table,
     TableBody,
@@ -27,6 +29,8 @@ import {
     type MemberCredentials,
 } from "@/services/user/user.type";
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 type MembersPanelProps = {
     members: Member[];
     canWrite: boolean;
@@ -37,10 +41,52 @@ export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId
     const router = useRouter();
     const access = useMemberAccess();
     const canWrite = access.isPending ? initialCanWrite : access.canWrite;
+    const [query, setQuery] = useState("");
+    const [results, setResults] = useState(members);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [editing, setEditing] = useState<Member | null>(null);
     const [credentials, setCredentials] = useState<CredentialsDialogState | null>(null);
     const [credentialsOpen, setCredentialsOpen] = useState(false);
+    const requestId = useRef(0);
+    const trimmedQuery = query.trim().replace(/\s+/g, " ");
+    const displayedMembers = trimmedQuery ? results : members;
+
+    useEffect(() => {
+        if (!trimmedQuery) {
+            requestId.current += 1;
+            return;
+        }
+
+        const id = ++requestId.current;
+        const timeout = window.setTimeout(() => {
+            void searchMembersAction({ query: trimmedQuery })
+                .then((result) => {
+                    if (id !== requestId.current) {
+                        return;
+                    }
+
+                    if (result?.data) {
+                        setResults(result.data);
+                        return;
+                    }
+
+                    if (result?.serverError) {
+                        notify("error", result.serverError);
+                    }
+                })
+                .catch(() => {
+                    if (id !== requestId.current) {
+                        return;
+                    }
+
+                    notify("error", "Não foi possível buscar os membros.");
+                });
+        }, SEARCH_DEBOUNCE_MS);
+
+        return () => {
+            window.clearTimeout(timeout);
+        };
+    }, [members, trimmedQuery]);
 
     function openCreate() {
         setEditing(null);
@@ -71,14 +117,24 @@ export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId
     return (
         <>
             <div className="flex flex-col gap-4">
-                {canWrite ? (
-                    <div className="flex justify-end">
-                        <Button type="button" onClick={openCreate}>
+                <div className="flex flex-col-reverse sm:flex-row items-start sm:items-center justify-end gap-3">
+                    <div className="ml-auto w-full min-w-0 max-w-sm">
+                        <Input
+                            value={query}
+                            onValueChange={setQuery}
+                            placeholder="Buscar por nome ou CPF"
+                            aria-label="Buscar membros"
+                            maxLength={120}
+                            startIcon={<HugeiconsIcon icon={Search01Icon} strokeWidth={2} />}
+                        />
+                    </div>
+                    {canWrite ? (
+                        <Button type="button" className="shrink-0 w-full sm:w-auto" onClick={openCreate}>
                             <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
                             Adicionar
                         </Button>
-                    </div>
-                ) : null}
+                    ) : null}
+                </div>
                 <div className="overflow-hidden rounded-xl border bg-background">
                     <Table>
                         <TableHeader>
@@ -92,7 +148,7 @@ export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {members.length === 0 ? (
+                            {displayedMembers.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={canWrite ? 6 : 5} className="text-muted-foreground">
                                         <div className="flex flex-col items-center gap-4 py-12">
@@ -102,7 +158,7 @@ export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                members.map((member) => (
+                                displayedMembers.map((member) => (
                                     <TableRow key={member.id} className="odd:bg-background even:bg-muted/50">
                                         <TableCell className="whitespace-normal font-medium">
                                             <span className="inline-flex flex-wrap items-center gap-2">

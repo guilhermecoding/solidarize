@@ -28,5 +28,9 @@ export const updateMemberSchema = memberFormSchema.extend({
     id: z.string().min(1, "Membro inválido."),
 });
 
+export const searchMembersSchema = z.object({
+    query: z.string().trim().min(1).max(120),
+});
+
 export type MemberFormValues = z.infer<typeof memberFormSchema>;
 export type UpdateMemberValues = z.infer<typeof updateMemberSchema>;
