@@ -41,6 +41,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatContact } from "@/lib/validate-contact";
@@ -58,6 +59,9 @@ import {
     type UserPermission,
     type UserRole,
 } from "@/services/user/user.type";
+import SeparatorSection from "@/components/separator-section";
+import { HugeiconsIcon, IconSvgElement } from "@hugeicons/react";
+import { BirthdayCakeIcon, Call02Icon, IdCardIcon, Key01Icon, Location01Icon, Mail02Icon, PowerIcon, StarAward02Icon, StatusIcon, UserCircleIcon, Wrench01Icon } from "@hugeicons/core-free-icons";
 
 const emptyMemberFormValues: MemberFormValues = {
     name: "",
@@ -219,6 +223,7 @@ function MemberForm({
                                 autoComplete="name"
                                 placeholder="Ex: João da Silva"
                                 attempts={submissionAttempts}
+                                icon={UserCircleIcon}
                             />
                         )}
                     </form.Field>
@@ -233,6 +238,7 @@ function MemberForm({
                                     placeholder="000.000.000-00"
                                     attempts={submissionAttempts}
                                     format={formatCpf}
+                                    icon={IdCardIcon}
                                 />
                             )}
                         </form.Field>
@@ -246,6 +252,7 @@ function MemberForm({
                                     autoComplete="email"
                                     placeholder="exemplo@email.com"
                                     attempts={submissionAttempts}
+                                    icon={Mail02Icon}
                                 />
                             )}
                         </form.Field>
@@ -261,6 +268,7 @@ function MemberForm({
                                     placeholder="(00) 00000-0000"
                                     attempts={submissionAttempts}
                                     format={formatContact}
+                                    icon={Call02Icon}
                                 />
                             )}
                         </form.Field>
@@ -268,12 +276,13 @@ function MemberForm({
                             {(field) => (
                                 <TextField
                                     field={field}
-                                    label="Data de nascimento"
+                                    label="Data de Nascimento"
                                     inputMode="numeric"
                                     autoComplete="bday"
                                     placeholder="DD/MM/AAAA"
                                     attempts={submissionAttempts}
                                     format={formatDateOfBirthInput}
+                                    icon={BirthdayCakeIcon}
                                 />
                             )}
                         </form.Field>
@@ -283,50 +292,60 @@ function MemberForm({
                             <TextField
                                 field={field}
                                 label="Endereço"
+                                placeholder="Ex: Rua das Flores, 123"
                                 autoComplete="street-address"
                                 attempts={submissionAttempts}
+                                icon={Location01Icon}
                             />
                         )}
                     </form.Field>
-                    <form.Field name="role">
-                        {(field) => (
-                            <ChoiceField
-                                field={field}
-                                label="Papel"
-                                attempts={submissionAttempts}
-                                options={userRoles.map((role) => ({
-                                    value: role,
-                                    label: userRoleLabels[role],
-                                }))}
-                                onChange={(value) => {
-                                    if (isUserRole(value)) {
-                                        field.handleChange(value);
-                                    }
-                                }}
-                            />
-                        )}
-                    </form.Field>
+
+                    <SeparatorSection title="Permissões" />
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 items-center gap-6">
+                        <form.Field name="role">
+                            {(field) => (
+                                <ChoiceField
+                                    field={field}
+                                    label="Papel"
+                                    attempts={submissionAttempts}
+                                    options={userRoles.map((role) => ({
+                                        value: role,
+                                        label: userRoleLabels[role],
+                                    }))}
+                                    onChange={(value) => {
+                                        if (isUserRole(value)) {
+                                            field.handleChange(value);
+                                        }
+                                    }}
+                                    icon={StarAward02Icon}
+                                />
+                            )}
+                        </form.Field>
+
+                        <form.Field name="permission">
+                            {(field) => (
+                                <ChoiceField
+                                    field={field}
+                                    label="Permissão"
+                                    attempts={submissionAttempts}
+                                    options={userPermissions.map((permission) => ({
+                                        value: permission,
+                                        label: userPermissionLabels[permission],
+                                    }))}
+                                    onChange={(value) => {
+                                        if (isUserPermission(value)) {
+                                            field.handleChange(value);
+                                        }
+                                    }}
+                                    icon={Key01Icon}
+                                />
+                            )}
+                        </form.Field>
+                    </div>
                     <form.Field name="access">
                         {(field) => (
                             <AccessField field={field} attempts={submissionAttempts} />
-                        )}
-                    </form.Field>
-                    <form.Field name="permission">
-                        {(field) => (
-                            <ChoiceField
-                                field={field}
-                                label="Permissão"
-                                attempts={submissionAttempts}
-                                options={userPermissions.map((permission) => ({
-                                    value: permission,
-                                    label: userPermissionLabels[permission],
-                                }))}
-                                onChange={(value) => {
-                                    if (isUserPermission(value)) {
-                                        field.handleChange(value);
-                                    }
-                                }}
-                            />
                         )}
                     </form.Field>
                 </FieldGroup>
@@ -369,19 +388,24 @@ function TextField({
     label,
     attempts,
     format,
+    icon,
     ...inputProps
 }: {
     field: MemberFieldApi<string>;
     label: string;
     attempts: number;
     format?: (value: string) => string;
+    icon?: IconSvgElement;
 } & Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "onBlur" | "id" | "name">) {
     const errors = visibleErrors(field, attempts);
     const invalid = errors.length > 0;
 
     return (
         <Field data-invalid={invalid || undefined}>
-            <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+            <div className="flex items-center gap-2">
+                {icon && <HugeiconsIcon icon={icon} strokeWidth={2} className="pointer-events-none size-4" />}
+                <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+            </div>
             <Input
                 id={field.name}
                 name={field.name}
@@ -410,10 +434,13 @@ function AccessField({
     const invalid = errors.length > 0;
 
     return (
-        <Field data-invalid={invalid || undefined}>
-            <div className="flex items-center justify-between gap-4">
+        <Field className="w-fit" data-invalid={invalid || undefined}>
+            <div className="flex justify-between gap-4">
                 <FieldContent>
-                    <FieldLabel htmlFor={field.name}>Acesso</FieldLabel>
+                    <div className="flex items-center gap-2">
+                        <HugeiconsIcon icon={PowerIcon} strokeWidth={2} className="pointer-events-none size-4" />
+                        <FieldLabel htmlFor={field.name}>Status do Usuário</FieldLabel>
+                    </div>
                     <FieldDescription>{userAccessLabels[field.state.value]}</FieldDescription>
                 </FieldContent>
                 <Switch
@@ -438,23 +465,28 @@ function ChoiceField({
     attempts,
     options,
     onChange,
+    icon,
 }: {
     field: ChoiceFieldApi;
     label: string;
     attempts: number;
     options: Array<{ value: string; label: string }>;
     onChange: (value: string | null) => void;
+    icon?: IconSvgElement;
 }) {
     const errors = visibleErrors(field, attempts);
     const invalid = errors.length > 0;
 
     return (
         <Field data-invalid={invalid || undefined}>
-            <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+            <div className="flex items-center gap-2">
+                {icon && <HugeiconsIcon icon={icon} strokeWidth={2} className="pointer-events-none size-4" />}
+                <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+            </div>
             <Select value={field.state.value} items={options} onValueChange={onChange}>
                 <SelectTrigger
                     id={field.name}
-                    className="h-12 w-full rounded-2xl px-5 text-base"
+                    className="text-base"
                     aria-invalid={invalid || undefined}
                     onBlur={field.handleBlur}
                 >
