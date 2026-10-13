@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Add01Icon, Edit03Icon, Search01Icon, SearchAlertIcon } from "@hugeicons/core-free-icons";
+import { Add01Icon, ArrowLeft01Icon, ArrowRight01Icon, Edit03Icon, Search01Icon, SearchAlertIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { searchMembersAction } from "@/app/(sistema)/membros/action";
@@ -29,7 +29,8 @@ import {
     type MemberCredentials,
 } from "@/services/user/user.type";
 
-const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_DEBOUNCE_MS = 300; // Tempo de debounce para a busca de membros
+const PAGE_SIZE = 10; // Tamanho da página para a tabela de membros
 
 type MembersPanelProps = {
     members: Member[];
@@ -42,6 +43,8 @@ export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId
     const access = useMemberAccess();
     const canWrite = access.isPending ? initialCanWrite : access.canWrite;
     const [query, setQuery] = useState("");
+    const [page, setPage] = useState(1);
+    const [pageQuery, setPageQuery] = useState("");
     const [results, setResults] = useState(members);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [editing, setEditing] = useState<Member | null>(null);
@@ -49,7 +52,16 @@ export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId
     const [credentialsOpen, setCredentialsOpen] = useState(false);
     const requestId = useRef(0);
     const trimmedQuery = query.trim().replace(/\s+/g, " ");
+
+    if (pageQuery !== trimmedQuery) {
+        setPageQuery(trimmedQuery);
+        setPage(1);
+    }
+
     const displayedMembers = trimmedQuery ? results : members;
+    const pageCount = Math.max(1, Math.ceil(displayedMembers.length / PAGE_SIZE));
+    const currentPage = Math.min(page, pageCount);
+    const pageMembers = displayedMembers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     useEffect(() => {
         if (!trimmedQuery) {
@@ -148,7 +160,7 @@ export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {displayedMembers.length === 0 ? (
+                            {pageMembers.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={canWrite ? 6 : 5} className="text-muted-foreground">
                                         <div className="flex flex-col items-center gap-4 py-12">
@@ -158,7 +170,7 @@ export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                displayedMembers.map((member) => (
+                                pageMembers.map((member) => (
                                     <TableRow key={member.id} className="odd:bg-background even:bg-muted/50">
                                         <TableCell className="whitespace-normal font-medium">
                                             <span className="inline-flex flex-wrap items-center gap-2">
@@ -203,6 +215,32 @@ export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId
                         </TableBody>
                     </Table>
                 </div>
+                {displayedMembers.length > 0 ? (
+                    <div className="flex items-center justify-end gap-1">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="icon-sm"
+                            className="border-foreground/20"
+                            aria-label="Página anterior"
+                            disabled={currentPage === 1}
+                            onClick={() => setPage(currentPage - 1)}
+                        >
+                            <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="icon-sm"
+                            aria-label="Próxima página"
+                            className="border-foreground/20"
+                            disabled={currentPage === pageCount}
+                            onClick={() => setPage(currentPage + 1)}
+                        >
+                            <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
+                        </Button>
+                    </div>
+                ) : null}
             </div>
             <MemberDrawer
                 open={drawerOpen}

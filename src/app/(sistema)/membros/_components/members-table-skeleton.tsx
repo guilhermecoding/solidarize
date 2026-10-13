@@ -41,6 +41,10 @@ export function MembersTableSkeleton() {
                     </TableBody>
                 </Table>
             </div>
+            <div className="flex items-center justify-end gap-1">
+                <Skeleton className="size-8 rounded-2xl" />
+                <Skeleton className="size-8 rounded-2xl" />
+            </div>
         </div>
     );
 }
