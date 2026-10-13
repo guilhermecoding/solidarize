@@ -130,7 +130,17 @@ export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId
         <>
             <div className="flex flex-col gap-4">
                 <div className="flex flex-col-reverse sm:flex-row items-start sm:items-center justify-end gap-3">
-                    <div className="ml-auto w-full min-w-0 max-w-sm">
+                    {
+                        displayedMembers.length > 0 ? (
+                            <span className="text-xl font-medium flex items-center gap-1 mt-4">
+                                Total
+                                <span className="text-sm bg-muted-foreground/30 border border-foreground font-medium px-2 rounded-md">
+                                    {displayedMembers.length}
+                                </span>
+                            </span>
+                        ) : null
+                    }
+                    <div className="ml-auto w-full min-w-0 sm:max-w-sm">
                         <Input
                             value={query}
                             onValueChange={setQuery}
