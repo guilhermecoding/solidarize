@@ -17,6 +17,9 @@ importers:
       '@hugeicons/react':
         specifier: ^1.1.10
         version: 1.1.10(react@19.3.1)
+      '@lordicon/react':
+        specifier: ^2.0.0
+        version: 2.0.0(react@19.3.1)
       '@prisma/adapter-pg':
         specifier: ^7.10.0
         version: 7.10.0
@@ -832,6 +835,24 @@ packages:
 
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
+
+  '@lordicon/element@3.0.2':
+    resolution: {integrity: sha512-y6p39HYBHMw155a9LA2XOj3NYCFo3Xx7vhrjKS/LB2+HnnKGKXOEWsykVGfsn+2JBZmajjsXAgdSly1AnR+uJA==}
+    engines: {node: '>=22'}
+
+  '@lordicon/react@2.0.0':
+    resolution: {integrity: sha512-PVtiq3HzLLwQbGRNDFGwJGTKwrf8q6D2t1ejE3S9Ss/SgTY9mfp/zjwQR6yIUKeFb5XRLRVvV59ytI+uG3CPqg==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      react: ^19
+
+  '@lordicon/utils-lottie@2.0.0':
+    resolution: {integrity: sha512-qD7kMhl78g9DCshZd62ARZeGpmw6pMhLlymjMt9vaqsMkOOlxCjLXeS+yh/j9EICL1oWVk3+fWiBAE0ayqmYtQ==}
+    engines: {node: '>=20'}
+
+  '@lordicon/web@2.1.0':
+    resolution: {integrity: sha512-T6/QxNCjboQnTYUYEFQGtl9Su3RbmtQk0Rm3//y6V0FP3BzsVqfyJ+QHRXru3/Ji0BJcvrdDuAQFeDNpPl2jJA==}
+    engines: {node: '>=20'}
 
   '@modelcontextprotocol/sdk@1.30.0':
     resolution: {integrity: sha512-xKd8OIzlqNzcqcNumGAa6g+PW2kjD5vrpcKOnfldAUPP3j7lnqMPwlTXQm8gF+UwH72z0lqaRbjr9hqGz0eITA==}
@@ -4626,6 +4647,21 @@ snapshots:
       keyv: 5.6.0
 
   '@keyv/serialize@1.1.1': {}
+
+  '@lordicon/element@3.0.2':
+    dependencies:
+      '@lordicon/web': 2.1.0
+
+  '@lordicon/react@2.0.0(react@19.3.1)':
+    dependencies:
+      '@lordicon/element': 3.0.2
+      react: 19.3.1
+
+  '@lordicon/utils-lottie@2.0.0': {}
+
+  '@lordicon/web@2.1.0':
+    dependencies:
+      '@lordicon/utils-lottie': 2.0.0
 
   '@modelcontextprotocol/sdk@1.30.0(supports-color@7.2.0)(zod@3.25.76)':
     dependencies:
