@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useAction } from "next-safe-action/hooks";
-
-import { createMemberAction, updateMemberAction } from "@/app/(sistema)/membros/action";
+import animationCheck from "@/assets/animations/lottie/check.json" with { type: "json" };
+import { createMemberAction, deleteMemberAction, updateMemberAction } from "@/app/(sistema)/membros/action";
+import { MemberDangerZoneDialog } from "@/app/(sistema)/membros/_components/member-danger-zone-dialog";
+import { AdminPasswordDialog } from "@/components/shared/admin-password-dialog";
+import { SystemDialog } from "@/components/shared/system-dialog";
 import { notify } from "@/lib/notify";
 import { memberFormSchema, type MemberFormValues } from "@/app/(sistema)/membros/schema";
 import { Button } from "@/components/ui/button";
@@ -62,6 +66,7 @@ import {
 import SeparatorSection from "@/components/separator-section";
 import { HugeiconsIcon, IconSvgElement } from "@hugeicons/react";
 import { BirthdayCakeIcon, Call02Icon, IdCardIcon, Key01Icon, Location01Icon, Mail02Icon, PowerIcon, StarAward02Icon, UserCircleIcon, UserRemove01Icon } from "@hugeicons/core-free-icons";
+import { LordIcon } from "@lordicon/react";
 
 const takenFieldMessages = {
     "Este CPF já está em uso.": {
@@ -89,6 +94,7 @@ const emptyMemberFormValues: MemberFormValues = {
 type MemberDrawerProps = {
     open: boolean;
     member: Member | null;
+    currentUserId: string;
     onOpenChange: (open: boolean) => void;
     onCreated: (credentials: MemberCredentials, message: string) => void;
     onUpdated: (message: string) => void;
@@ -97,73 +103,171 @@ type MemberDrawerProps = {
 export function MemberDrawer({
     open,
     member,
+    currentUserId,
     onOpenChange,
     onCreated,
     onUpdated,
 }: MemberDrawerProps) {
+    const router = useRouter();
     const isMobile = useIsMobile();
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [passwordOpen, setPasswordOpen] = useState(false);
+    const [successOpen, setSuccessOpen] = useState(false);
+    const { executeAsync: deleteMember } = useAction(deleteMemberAction);
+    const canDelete = member !== null && member.id !== currentUserId;
     const title = member ? "Editar Membro" : "Adicionar Membro";
     const description = member
         ? "Atualize os dados e o acesso deste membro."
         : "Preencha os dados para criar o acesso do membro.";
+
+    function handleEditOpenChange(nextOpen: boolean) {
+        if (!nextOpen) {
+            setConfirmOpen(false);
+            setPasswordOpen(false);
+        }
+
+        onOpenChange(nextOpen);
+    }
+
+    function handleDeleted() {
+        setConfirmOpen(false);
+        setPasswordOpen(false);
+        onOpenChange(false);
+        setSuccessOpen(true);
+        router.refresh();
+    }
+
     const form = (
         <MemberForm
             key={member?.id ?? "new"}
             member={member}
             surface={isMobile ? "drawer" : "dialog"}
+            canDelete={canDelete}
+            onRequestDelete={() => setConfirmOpen(true)}
             onCreated={onCreated}
             onUpdated={onUpdated}
         />
     );
+    const deleteDialogs = (
+        <>
+            <MemberDangerZoneDialog
+                open={confirmOpen}
+                onOpenChange={setConfirmOpen}
+                onConfirm={() => {
+                    setConfirmOpen(false);
+                    setPasswordOpen(true);
+                }}
+            />
+            <AdminPasswordDialog
+                open={passwordOpen}
+                onOpenChange={setPasswordOpen}
+                onConfirm={async (password) => {
+                    if (!member) {
+                        return { ok: false, message: "Membro inválido." };
+                    }
+
+                    const result = await deleteMember({ id: member.id, password });
+
+                    if (result.serverError) {
+                        return { ok: false, message: result.serverError };
+                    }
+
+                    if (result.validationErrors) {
+                        return { ok: false, message: "A senha deve ter pelo menos 8 caracteres." };
+                    }
+
+                    if (!result.data?.ok) {
+                        return {
+                            ok: false,
+                            message: result.data?.message ?? "Não foi possível excluir o membro.",
+                        };
+                    }
+
+                    return { ok: true };
+                }}
+                onSuccess={handleDeleted}
+            />
+            <SystemDialog
+                mode="auto-close"
+                open={successOpen}
+                onOpenChange={setSuccessOpen}
+                title="Membro excluído"
+                showCloseButton={false}
+                description="Membro excluído com sucesso."
+            >
+                <div className="flex flex-col items-center justify-center">
+                    <LordIcon
+                        icon={animationCheck}
+                        trigger="in"
+                        className="size-24"
+                    />
+                    <h2 className="text-3xl font-bold mt-4">
+                        Deu certo!
+                    </h2>
+                </div>
+                <p className="text-muted-foreground text-center text-lg font-medium">Membro excluído com sucesso.</p>
+            </SystemDialog>
+        </>
+    );
 
     if (isMobile) {
         return (
-            <Drawer
-                open={open}
-                onOpenChange={onOpenChange}
-                swipeDirection="down"
-                snapPoints={[1]}
-                showSwipeHandle
-            >
-                <DrawerContent
-                    className="rounded-none"
-                    style={{
-                        "--drawer-content-height": "100dvh",
-                        "--drawer-content-max-height": "100dvh",
-                        "--drawer-inset": "0px",
-                    } as React.CSSProperties}
+            <>
+                <Drawer
+                    open={open}
+                    onOpenChange={handleEditOpenChange}
+                    swipeDirection="down"
+                    snapPoints={[1]}
+                    showSwipeHandle
                 >
-                    <DrawerHeader>
-                        <DrawerTitle className="text-xl font-bold">{title}</DrawerTitle>
-                        <DrawerDescription>{description}</DrawerDescription>
-                    </DrawerHeader>
-                    {form}
-                </DrawerContent>
-            </Drawer>
+                    <DrawerContent
+                        className="rounded-none"
+                        style={{
+                            "--drawer-content-height": "100dvh",
+                            "--drawer-content-max-height": "100dvh",
+                            "--drawer-inset": "0px",
+                        } as React.CSSProperties}
+                    >
+                        <DrawerHeader>
+                            <DrawerTitle className="text-xl font-bold">{title}</DrawerTitle>
+                            <DrawerDescription>{description}</DrawerDescription>
+                        </DrawerHeader>
+                        {form}
+                    </DrawerContent>
+                </Drawer>
+                {deleteDialogs}
+            </>
         );
     }
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(64rem,calc(100%-2rem))]">
-                <DialogHeader className="shrink-0 px-6 pt-6 pr-14">
-                    <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
-                    <DialogDescription>{description}</DialogDescription>
-                </DialogHeader>
-                {form}
-            </DialogContent>
-        </Dialog>
+        <>
+            <Dialog open={open} onOpenChange={handleEditOpenChange}>
+                <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(64rem,calc(100%-2rem))]">
+                    <DialogHeader className="shrink-0 px-6 pt-6 pr-14">
+                        <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
+                        <DialogDescription>{description}</DialogDescription>
+                    </DialogHeader>
+                    {form}
+                </DialogContent>
+            </Dialog>
+            {deleteDialogs}
+        </>
     );
 }
 
 function MemberForm({
     member,
     surface,
+    canDelete,
+    onRequestDelete,
     onCreated,
     onUpdated,
 }: {
     member: Member | null;
     surface: "drawer" | "dialog";
+    canDelete: boolean;
+    onRequestDelete: () => void;
     onCreated: (credentials: MemberCredentials, message: string) => void;
     onUpdated: (message: string) => void;
 }) {
@@ -383,19 +487,24 @@ function MemberForm({
                         )}
                     </form.Field>
 
-                    <SeparatorSection title="Zona de Perigo" />
+                    {canDelete ? (
+                        <>
+                            <SeparatorSection title="Zona de Perigo" />
 
-                    <div>
-                        <Button
-                            type="button"
-                            variant="destructive"
-                            className="font-bold"
-                            disabled={isPending}
-                        >
-                            <HugeiconsIcon icon={UserRemove01Icon} strokeWidth={2.5} className="size-5" />
-                            Excluir Membro
-                        </Button>
-                    </div>
+                            <div>
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    className="font-bold"
+                                    disabled={isPending}
+                                    onClick={onRequestDelete}
+                                >
+                                    <HugeiconsIcon icon={UserRemove01Icon} strokeWidth={2.5} className="size-5" />
+                                    Excluir Membro
+                                </Button>
+                            </div>
+                        </>
+                    ) : null}
 
                 </FieldGroup>
             </form>

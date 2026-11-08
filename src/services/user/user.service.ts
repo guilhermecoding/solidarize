@@ -16,6 +16,7 @@ import {
     parseBrazilianDate,
 } from "@/lib/validate-date-of-birth";
 import type {
+    DeleteMemberInput,
     Member,
     MemberActor,
     MemberCredentials,
@@ -301,6 +302,75 @@ export async function updateMember(
     }
 
     return serverSuccess(undefined, "Membro atualizado com sucesso.");
+}
+
+export async function deleteMember(
+    actor: MemberActor,
+    input: DeleteMemberInput,
+): Promise<ServerResponse> {
+    const requestHeaders = await headers();
+
+    try {
+        await auth.api.verifyPassword({
+            body: { password: input.password },
+            headers: requestHeaders,
+        });
+    } catch (error) {
+        if (error instanceof APIError) {
+            if (readErrorCode(error) === "INVALID_PASSWORD") {
+                return serverFailure("Senha incorreta.");
+            }
+
+            return authFailure(error, "Não foi possível confirmar a senha.");
+        }
+
+        throw error;
+    }
+
+    const current = await prisma.user.findUnique({
+        where: { id: input.id },
+        select: { id: true, role: true },
+    });
+
+    if (!current) {
+        return serverFailure("Membro não encontrado.");
+    }
+
+    if (actor.id === current.id) {
+        return serverFailure("Você não pode excluir a própria conta.");
+    }
+
+    if (current.role === "admin") {
+        const otherAdmins = await prisma.user.count({
+            where: {
+                role: "admin",
+                id: { not: current.id },
+            },
+        });
+
+        if (otherAdmins === 0) {
+            return serverFailure("É necessário manter ao menos um administrador.");
+        }
+    }
+
+    try {
+        await auth.api.removeUser({
+            body: { userId: current.id },
+            headers: requestHeaders,
+        });
+    } catch (error) {
+        if (error instanceof APIError) {
+            if (readErrorCode(error) === "YOU_CANNOT_REMOVE_YOURSELF") {
+                return serverFailure("Você não pode excluir a própria conta.");
+            }
+
+            return authFailure(error, "Não foi possível excluir o membro.");
+        }
+
+        throw error;
+    }
+
+    return serverSuccess(undefined, "Membro excluído com sucesso.");
 }
 
 function generatePassword(): string {

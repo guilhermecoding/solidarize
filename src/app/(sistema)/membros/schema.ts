@@ -32,5 +32,10 @@ export const searchMembersSchema = z.object({
     query: z.string().trim().min(1).max(120),
 });
 
+export const deleteMemberSchema = z.object({
+    id: z.string().min(1, "Membro inválido."),
+    password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres."),
+});
+
 export type MemberFormValues = z.infer<typeof memberFormSchema>;
 export type UpdateMemberValues = z.infer<typeof updateMemberSchema>;

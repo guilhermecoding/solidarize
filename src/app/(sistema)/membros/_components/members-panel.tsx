@@ -255,6 +255,7 @@ export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId
             <MemberDrawer
                 open={drawerOpen}
                 member={editing}
+                currentUserId={currentUserId}
                 onOpenChange={handleDrawerOpenChange}
                 onCreated={handleCreated}
                 onUpdated={handleUpdated}

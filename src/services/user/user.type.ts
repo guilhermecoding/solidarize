@@ -57,6 +57,11 @@ export type UpdateMemberInput = MemberInput & {
     id: string;
 };
 
+export type DeleteMemberInput = {
+    id: string;
+    password: string;
+};
+
 export type MemberCredentials = {
     email: string;
     password: string;
