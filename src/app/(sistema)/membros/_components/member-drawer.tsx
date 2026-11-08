@@ -61,7 +61,7 @@ import {
 } from "@/services/user/user.type";
 import SeparatorSection from "@/components/separator-section";
 import { HugeiconsIcon, IconSvgElement } from "@hugeicons/react";
-import { BirthdayCakeIcon, Call02Icon, IdCardIcon, Key01Icon, Location01Icon, Mail02Icon, PowerIcon, StarAward02Icon, UserCircleIcon } from "@hugeicons/core-free-icons";
+import { BirthdayCakeIcon, Call02Icon, IdCardIcon, Key01Icon, Location01Icon, Mail02Icon, PowerIcon, StarAward02Icon, UserCircleIcon, UserRemove01Icon } from "@hugeicons/core-free-icons";
 
 const takenFieldMessages = {
     "Este CPF já está em uso.": {
@@ -376,11 +376,27 @@ function MemberForm({
                             )}
                         </form.Field>
                     </div>
+
                     <form.Field name="access">
                         {(field) => (
                             <AccessField field={field} attempts={submissionAttempts} />
                         )}
                     </form.Field>
+
+                    <SeparatorSection title="Zona de Perigo" />
+
+                    <div>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            className="font-bold"
+                            disabled={isPending}
+                        >
+                            <HugeiconsIcon icon={UserRemove01Icon} strokeWidth={2.5} className="size-5" />
+                            Excluir Membro
+                        </Button>
+                    </div>
+
                 </FieldGroup>
             </form>
             {surface === "dialog" ? (
