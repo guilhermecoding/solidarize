@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useAction } from "next-safe-action/hooks";
 import animationCheck from "@/assets/animations/lottie/check.json" with { type: "json" };
-import { createMemberAction, deleteMemberAction, updateMemberAction } from "@/app/(sistema)/membros/action";
+import { createMemberAction, deleteMemberAction, setMemberPasswordAction, updateMemberAction } from "@/app/(sistema)/membros/action";
 import { MemberDangerZoneDialog } from "@/app/(sistema)/membros/_components/member-danger-zone-dialog";
+import { MemberPasswordDialog } from "@/app/(sistema)/membros/_components/member-password-dialog";
 import { AdminPasswordDialog } from "@/components/shared/admin-password-dialog";
 import { SystemDialog } from "@/components/shared/system-dialog";
 import { notify } from "@/lib/notify";
@@ -65,7 +66,7 @@ import {
 } from "@/services/user/user.type";
 import SeparatorSection from "@/components/separator-section";
 import { HugeiconsIcon, IconSvgElement } from "@hugeicons/react";
-import { BirthdayCakeIcon, Call02Icon, IdCardIcon, Key01Icon, Location01Icon, Mail02Icon, PowerIcon, StarAward02Icon, UserCircleIcon, UserRemove01Icon } from "@hugeicons/core-free-icons";
+import { BirthdayCakeIcon, Call02Icon, IdCardIcon, Key01Icon, Location01Icon, Mail02Icon, PowerIcon, SquareLock01Icon, StarAward02Icon, UserCircleIcon, UserRemove01Icon } from "@hugeicons/core-free-icons";
 import { LordIcon } from "@lordicon/react";
 
 const takenFieldMessages = {
@@ -112,8 +113,12 @@ export function MemberDrawer({
     const isMobile = useIsMobile();
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [passwordOpen, setPasswordOpen] = useState(false);
+    const [memberPasswordOpen, setMemberPasswordOpen] = useState(false);
+    const [nextPassword, setNextPassword] = useState("");
+    const [dangerAction, setDangerAction] = useState<"delete" | "set-password">("delete");
     const [successOpen, setSuccessOpen] = useState(false);
     const { executeAsync: deleteMember } = useAction(deleteMemberAction);
+    const { executeAsync: changeMemberPassword } = useAction(setMemberPasswordAction);
     const canDelete = member !== null && member.id !== currentUserId;
     const title = member ? "Editar Membro" : "Adicionar Membro";
     const description = member
@@ -124,6 +129,8 @@ export function MemberDrawer({
         if (!nextOpen) {
             setConfirmOpen(false);
             setPasswordOpen(false);
+            setMemberPasswordOpen(false);
+            setNextPassword("");
         }
 
         onOpenChange(nextOpen);
@@ -132,6 +139,8 @@ export function MemberDrawer({
     function handleDeleted() {
         setConfirmOpen(false);
         setPasswordOpen(false);
+        setMemberPasswordOpen(false);
+        setNextPassword("");
         onOpenChange(false);
         setSuccessOpen(true);
         router.refresh();
@@ -144,6 +153,7 @@ export function MemberDrawer({
             surface={isMobile ? "drawer" : "dialog"}
             canDelete={canDelete}
             onRequestDelete={() => setConfirmOpen(true)}
+            onRequestPasswordChange={() => setMemberPasswordOpen(true)}
             onCreated={onCreated}
             onUpdated={onUpdated}
         />
@@ -154,7 +164,17 @@ export function MemberDrawer({
                 open={confirmOpen}
                 onOpenChange={setConfirmOpen}
                 onConfirm={() => {
+                    setDangerAction("delete");
                     setConfirmOpen(false);
+                    setPasswordOpen(true);
+                }}
+            />
+            <MemberPasswordDialog
+                open={memberPasswordOpen}
+                onOpenChange={setMemberPasswordOpen}
+                onSubmit={(newPassword) => {
+                    setNextPassword(newPassword);
+                    setDangerAction("set-password");
                     setPasswordOpen(true);
                 }}
             />
@@ -166,7 +186,14 @@ export function MemberDrawer({
                         return { ok: false, message: "Membro inválido." };
                     }
 
-                    const result = await deleteMember({ id: member.id, password });
+                    const changingPassword = dangerAction === "set-password";
+                    const result = changingPassword
+                        ? await changeMemberPassword({
+                            id: member.id,
+                            password,
+                            newPassword: nextPassword,
+                        })
+                        : await deleteMember({ id: member.id, password });
 
                     if (result.serverError) {
                         return { ok: false, message: result.serverError };
@@ -179,13 +206,28 @@ export function MemberDrawer({
                     if (!result.data?.ok) {
                         return {
                             ok: false,
-                            message: result.data?.message ?? "Não foi possível excluir o membro.",
+                            message: result.data?.message ?? (
+                                changingPassword
+                                    ? "Não foi possível alterar a senha."
+                                    : "Não foi possível excluir o membro."
+                            ),
                         };
                     }
 
                     return { ok: true };
                 }}
-                onSuccess={handleDeleted}
+                onSuccess={() => {
+                    if (dangerAction === "set-password") {
+                        setMemberPasswordOpen(false);
+                        setPasswordOpen(false);
+                        setNextPassword("");
+                        onOpenChange(false);
+                        notify("success", "Senha alterada com sucesso.");
+                        return;
+                    }
+
+                    handleDeleted();
+                }}
             />
             <SystemDialog
                 mode="auto-close"
@@ -261,6 +303,7 @@ function MemberForm({
     surface,
     canDelete,
     onRequestDelete,
+    onRequestPasswordChange,
     onCreated,
     onUpdated,
 }: {
@@ -268,6 +311,7 @@ function MemberForm({
     surface: "drawer" | "dialog";
     canDelete: boolean;
     onRequestDelete: () => void;
+    onRequestPasswordChange: () => void;
     onCreated: (credentials: MemberCredentials, message: string) => void;
     onUpdated: (message: string) => void;
 }) {
@@ -491,7 +535,17 @@ function MemberForm({
                         <>
                             <SeparatorSection title="Zona de Perigo" />
 
-                            <div>
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="font-bold"
+                                    disabled={isPending}
+                                    onClick={onRequestPasswordChange}
+                                >
+                                    <HugeiconsIcon icon={SquareLock01Icon} strokeWidth={2.5} className="size-5" />
+                                    Alterar Senha
+                                </Button>
                                 <Button
                                     type="button"
                                     variant="destructive"

@@ -37,5 +37,11 @@ export const deleteMemberSchema = z.object({
     password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres."),
 });
 
+export const setMemberPasswordSchema = z.object({
+    id: z.string().min(1, "Membro inválido."),
+    password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres."),
+    newPassword: z.string().min(8, "A senha deve ter pelo menos 8 caracteres."),
+});
+
 export type MemberFormValues = z.infer<typeof memberFormSchema>;
 export type UpdateMemberValues = z.infer<typeof updateMemberSchema>;

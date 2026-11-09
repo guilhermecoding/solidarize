@@ -62,6 +62,12 @@ export type DeleteMemberInput = {
     password: string;
 };
 
+export type SetMemberPasswordInput = {
+    id: string;
+    password: string;
+    newPassword: string;
+};
+
 export type MemberCredentials = {
     email: string;
     password: string;

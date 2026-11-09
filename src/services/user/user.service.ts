@@ -21,6 +21,7 @@ import type {
     MemberActor,
     MemberCredentials,
     MemberInput,
+    SetMemberPasswordInput,
     UpdateMemberInput,
     UserAccess,
     UserPermission,
@@ -371,6 +372,70 @@ export async function deleteMember(
     }
 
     return serverSuccess(undefined, "Membro excluído com sucesso.");
+}
+
+export async function setMemberPassword(
+    input: SetMemberPasswordInput,
+): Promise<ServerResponse> {
+    const requestHeaders = await headers();
+
+    try {
+        await auth.api.verifyPassword({
+            body: { password: input.password },
+            headers: requestHeaders,
+        });
+    } catch (error) {
+        if (error instanceof APIError) {
+            if (readErrorCode(error) === "INVALID_PASSWORD") {
+                return serverFailure("Senha incorreta.");
+            }
+
+            return authFailure(error, "Não foi possível confirmar a senha.");
+        }
+
+        throw error;
+    }
+
+    const current = await prisma.user.findUnique({
+        where: { id: input.id },
+        select: { id: true },
+    });
+
+    if (!current) {
+        return serverFailure("Membro não encontrado.");
+    }
+
+    try {
+        await auth.api.setUserPassword({
+            body: {
+                userId: current.id,
+                newPassword: input.newPassword,
+            },
+            headers: requestHeaders,
+        });
+    } catch (error) {
+        if (error instanceof APIError) {
+            const code = readErrorCode(error);
+
+            if (code === "PASSWORD_TOO_SHORT") {
+                return serverFailure("A senha deve ter pelo menos 8 caracteres.");
+            }
+
+            if (code === "PASSWORD_TOO_LONG") {
+                return serverFailure("A senha é longa demais.");
+            }
+
+            if (code === "USER_NOT_FOUND") {
+                return serverFailure("Membro não encontrado.");
+            }
+
+            return authFailure(error, "Não foi possível alterar a senha.");
+        }
+
+        throw error;
+    }
+
+    return serverSuccess(undefined, "Senha alterada com sucesso.");
 }
 
 function generatePassword(): string {

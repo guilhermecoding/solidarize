@@ -3,8 +3,8 @@
 import { revalidatePath, updateTag } from "next/cache";
 
 import { readActionClient, writeActionClient } from "@/lib/safe-action";
-import { USER_CACHE_TAG, createMember, deleteMember, searchMembers, updateMember } from "@/services/user/user.service";
-import { deleteMemberSchema, memberFormSchema, searchMembersSchema, updateMemberSchema } from "./schema";
+import { USER_CACHE_TAG, createMember, deleteMember, searchMembers, setMemberPassword, updateMember } from "@/services/user/user.service";
+import { deleteMemberSchema, memberFormSchema, searchMembersSchema, setMemberPasswordSchema, updateMemberSchema } from "./schema";
 
 export const searchMembersAction = readActionClient
     .inputSchema(searchMembersSchema)
@@ -49,4 +49,10 @@ export const deleteMemberAction = writeActionClient
         }
 
         return result;
+    });
+
+export const setMemberPasswordAction = writeActionClient
+    .inputSchema(setMemberPasswordSchema)
+    .action(async ({ parsedInput }) => {
+        return setMemberPassword(parsedInput);
     });
