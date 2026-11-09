@@ -116,10 +116,12 @@ export function MemberDrawer({
     const [memberPasswordOpen, setMemberPasswordOpen] = useState(false);
     const [nextPassword, setNextPassword] = useState("");
     const [dangerAction, setDangerAction] = useState<"delete" | "set-password">("delete");
+    const [successKind, setSuccessKind] = useState<"delete" | "set-password">("delete");
     const [successOpen, setSuccessOpen] = useState(false);
     const { executeAsync: deleteMember } = useAction(deleteMemberAction);
     const { executeAsync: changeMemberPassword } = useAction(setMemberPasswordAction);
-    const canDelete = member !== null && member.id !== currentUserId;
+    const canChangePassword = member !== null;
+    const canDelete = canChangePassword && member.id !== currentUserId;
     const title = member ? "Editar Membro" : "Adicionar Membro";
     const description = member
         ? "Atualize os dados e o acesso deste membro."
@@ -142,8 +144,18 @@ export function MemberDrawer({
         setMemberPasswordOpen(false);
         setNextPassword("");
         onOpenChange(false);
+        setSuccessKind("delete");
         setSuccessOpen(true);
         router.refresh();
+    }
+
+    function handlePasswordChanged() {
+        setMemberPasswordOpen(false);
+        setPasswordOpen(false);
+        setNextPassword("");
+        onOpenChange(false);
+        setSuccessKind("set-password");
+        setSuccessOpen(true);
     }
 
     const form = (
@@ -151,6 +163,7 @@ export function MemberDrawer({
             key={member?.id ?? "new"}
             member={member}
             surface={isMobile ? "drawer" : "dialog"}
+            canChangePassword={canChangePassword}
             canDelete={canDelete}
             onRequestDelete={() => setConfirmOpen(true)}
             onRequestPasswordChange={() => setMemberPasswordOpen(true)}
@@ -218,11 +231,7 @@ export function MemberDrawer({
                 }}
                 onSuccess={() => {
                     if (dangerAction === "set-password") {
-                        setMemberPasswordOpen(false);
-                        setPasswordOpen(false);
-                        setNextPassword("");
-                        onOpenChange(false);
-                        notify("success", "Senha alterada com sucesso.");
+                        handlePasswordChanged();
                         return;
                     }
 
@@ -233,9 +242,9 @@ export function MemberDrawer({
                 mode="auto-close"
                 open={successOpen}
                 onOpenChange={setSuccessOpen}
-                title="Membro excluído"
+                title={successKind === "set-password" ? "Senha alterada" : "Membro excluído"}
                 showCloseButton={false}
-                description="Membro excluído com sucesso."
+                description={successKind === "set-password" ? "Senha alterada com sucesso." : "Membro excluído com sucesso."}
             >
                 <div className="flex flex-col items-center justify-center">
                     <LordIcon
@@ -247,7 +256,9 @@ export function MemberDrawer({
                         Deu certo!
                     </h2>
                 </div>
-                <p className="text-muted-foreground text-center text-lg font-medium">Membro excluído com sucesso.</p>
+                <p className="text-muted-foreground text-center text-lg font-medium">
+                    {successKind === "set-password" ? "Senha alterada com sucesso." : "Membro excluído com sucesso."}
+                </p>
             </SystemDialog>
         </>
     );
@@ -301,6 +312,7 @@ export function MemberDrawer({
 function MemberForm({
     member,
     surface,
+    canChangePassword,
     canDelete,
     onRequestDelete,
     onRequestPasswordChange,
@@ -309,6 +321,7 @@ function MemberForm({
 }: {
     member: Member | null;
     surface: "drawer" | "dialog";
+    canChangePassword: boolean;
     canDelete: boolean;
     onRequestDelete: () => void;
     onRequestPasswordChange: () => void;
@@ -531,7 +544,7 @@ function MemberForm({
                         )}
                     </form.Field>
 
-                    {canDelete ? (
+                    {canChangePassword ? (
                         <>
                             <SeparatorSection title="Zona de Perigo" />
 
@@ -546,16 +559,18 @@ function MemberForm({
                                     <HugeiconsIcon icon={SquareLock01Icon} strokeWidth={2.5} className="size-5" />
                                     Alterar Senha
                                 </Button>
-                                <Button
-                                    type="button"
-                                    variant="destructive"
-                                    className="font-bold"
-                                    disabled={isPending}
-                                    onClick={onRequestDelete}
-                                >
-                                    <HugeiconsIcon icon={UserRemove01Icon} strokeWidth={2.5} className="size-5" />
-                                    Excluir Membro
-                                </Button>
+                                {canDelete ? (
+                                    <Button
+                                        type="button"
+                                        variant="destructive"
+                                        className="font-bold"
+                                        disabled={isPending}
+                                        onClick={onRequestDelete}
+                                    >
+                                        <HugeiconsIcon icon={UserRemove01Icon} strokeWidth={2.5} className="size-5" />
+                                        Excluir Membro
+                                    </Button>
+                                ) : null}
                             </div>
                         </>
                     ) : null}
