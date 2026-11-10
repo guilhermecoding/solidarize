@@ -15,17 +15,19 @@ import {
     isBirthDateInputValid,
     parseBrazilianDate,
 } from "@/lib/validate-date-of-birth";
-import type {
-    DeleteMemberInput,
-    Member,
-    MemberActor,
-    MemberCredentials,
-    MemberInput,
-    SetMemberPasswordInput,
-    UpdateMemberInput,
-    UserAccess,
-    UserPermission,
-    UserRole,
+import {
+    userGenders,
+    type DeleteMemberInput,
+    type Member,
+    type MemberActor,
+    type MemberCredentials,
+    type MemberInput,
+    type SetMemberPasswordInput,
+    type UpdateMemberInput,
+    type UserAccess,
+    type UserGender,
+    type UserPermission,
+    type UserRole,
 } from "@/services/user/user.type";
 
 export const USER_CACHE_TAG = "users";
@@ -44,6 +46,7 @@ type MemberRecord = {
     cpf: string;
     contact: string;
     dateOfBirth: Date;
+    gender: string;
     address: string | null;
     role: string | null;
     banned: boolean | null;
@@ -60,6 +63,7 @@ const memberSelect = {
     cpf: true,
     contact: true,
     dateOfBirth: true,
+    gender: true,
     address: true,
     role: true,
     banned: true,
@@ -107,6 +111,7 @@ export async function searchMembers(query: string): Promise<Member[]> {
             cpf,
             contact,
             "dateOfBirth",
+            gender,
             address,
             role,
             banned,
@@ -155,6 +160,7 @@ export async function createMember(
                     cpf: prepared.cpf,
                     contact: prepared.contact,
                     dateOfBirth: prepared.dateOfBirth,
+                    gender: prepared.gender,
                     address: prepared.address,
                     permission: prepared.permission,
                 },
@@ -259,6 +265,7 @@ export async function updateMember(
                     cpf: prepared.cpf,
                     contact: prepared.contact,
                     dateOfBirth: prepared.dateOfBirth,
+                    gender: prepared.gender,
                     address: prepared.address,
                     permission: prepared.permission,
                 },
@@ -479,6 +486,7 @@ type PreparedMember = {
     contact: string;
     address: string;
     dateOfBirth: Date;
+    gender: UserGender;
     role: UserRole;
     access: UserAccess;
     permission: UserPermission;
@@ -499,6 +507,7 @@ function prepareMemberInput(input: MemberInput): PreparedMember | ServerFailure 
         contact: normalizeContact(input.contact),
         address: input.address.trim(),
         dateOfBirth,
+        gender: toGender(input.gender),
         role: input.role,
         access: input.access,
         permission: input.permission,
@@ -569,6 +578,7 @@ function normalizeMemberRecord(row: RawMemberRow): MemberRecord {
         cpf: row.cpf,
         contact: row.contact,
         dateOfBirth: toDate(row.dateOfBirth),
+        gender: row.gender,
         address: row.address,
         role: row.role,
         banned: row.banned,
@@ -590,10 +600,15 @@ function toMember(user: MemberRecord): Member {
         contact: formatContact(user.contact),
         address: user.address ?? "",
         dateOfBirth: formatDateOfBirth(user.dateOfBirth),
+        gender: toGender(user.gender),
         role: user.role === "admin" ? "admin" : "member",
         access: toAccess(user.banned, user.banExpires),
         permission: user.permission === "full" ? "full" : "read",
     };
+}
+
+function toGender(value: string): UserGender {
+    return userGenders.find((gender) => gender === value) ?? "unspecified";
 }
 
 function toAccess(banned: boolean | null, banExpires: Date | null): UserAccess {

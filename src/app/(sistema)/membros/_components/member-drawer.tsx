@@ -54,6 +54,8 @@ import { formatCpf } from "@/lib/validate-cpf";
 import { formatDateOfBirthInput } from "@/lib/validate-date-of-birth";
 import {
     userAccessLabels,
+    userGenderLabels,
+    userGenders,
     userPermissionLabels,
     userPermissions,
     userRoleLabels,
@@ -61,12 +63,13 @@ import {
     type Member,
     type MemberCredentials,
     type UserAccess,
+    type UserGender,
     type UserPermission,
     type UserRole,
 } from "@/services/user/user.type";
 import SeparatorSection from "@/components/separator-section";
 import { HugeiconsIcon, IconSvgElement } from "@hugeicons/react";
-import { BirthdayCakeIcon, Call02Icon, IdCardIcon, Key01Icon, Location01Icon, Mail02Icon, PowerIcon, SquareLock01Icon, StarAward02Icon, UserCircleIcon, UserRemove01Icon } from "@hugeicons/core-free-icons";
+import { BirthdayCakeIcon, Call02Icon, IdCardIcon, Key01Icon, Location01Icon, Mail02Icon, PowerIcon, SquareLock01Icon, StarAward02Icon, UserCircleIcon, UserRemove01Icon, VenusAndMarsIcon } from "@hugeicons/core-free-icons";
 import { LordIcon } from "@lordicon/react";
 
 const takenFieldMessages = {
@@ -87,6 +90,7 @@ const emptyMemberFormValues: MemberFormValues = {
     contact: "",
     address: "",
     dateOfBirth: "",
+    gender: "unspecified",
     role: "member",
     access: "active",
     permission: "read",
@@ -451,7 +455,7 @@ function MemberForm({
                             )}
                         </form.Field>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <form.Field name="contact">
                             {(field) => (
                                 <TextField
@@ -477,6 +481,25 @@ function MemberForm({
                                     attempts={submissionAttempts}
                                     format={formatDateOfBirthInput}
                                     icon={BirthdayCakeIcon}
+                                />
+                            )}
+                        </form.Field>
+                        <form.Field name="gender">
+                            {(field) => (
+                                <ChoiceField
+                                    field={field}
+                                    label="Gênero"
+                                    attempts={submissionAttempts}
+                                    options={userGenders.map((gender) => ({
+                                        value: gender,
+                                        label: userGenderLabels[gender],
+                                    }))}
+                                    onChange={(value) => {
+                                        if (isUserGender(value)) {
+                                            field.handleChange(value);
+                                        }
+                                    }}
+                                    icon={VenusAndMarsIcon}
                                 />
                             )}
                         </form.Field>
@@ -795,10 +818,15 @@ function toFormValues(member: Member): MemberFormValues {
         contact: member.contact,
         address: member.address,
         dateOfBirth: member.dateOfBirth,
+        gender: member.gender,
         role: member.role,
         access: member.access,
         permission: member.permission,
     };
+}
+
+function isUserGender(value: string | null): value is UserGender {
+    return userGenders.some((gender) => gender === value);
 }
 
 function isUserRole(value: string | null): value is UserRole {

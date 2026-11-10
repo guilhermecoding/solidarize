@@ -5,6 +5,7 @@ import { isValidCpf } from "@/lib/validate-cpf";
 import { isBirthDateInputValid } from "@/lib/validate-date-of-birth";
 import {
     userAccesses,
+    userGenders,
     userPermissions,
     userRoles,
 } from "@/services/user/user.type";
@@ -19,6 +20,7 @@ export const memberFormSchema = z.object({
         .string()
         .trim()
         .refine(isBirthDateInputValid, "Informe uma data válida no formato DD/MM/AAAA."),
+    gender: z.enum(userGenders, "Selecione o gênero."),
     role: z.enum(userRoles, "Selecione o papel."),
     access: z.enum(userAccesses, "Selecione o acesso."),
     permission: z.enum(userPermissions, "Selecione a permissão."),

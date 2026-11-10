@@ -96,6 +96,7 @@ async function main() {
                 cpf: normalizeCpf(env.PRIMARY_USER_CPF),
                 contact: env.PRIMARY_USER_CONTACT,
                 dateOfBirth,
+                gender: "unspecified",
                 permission: "full",
                 ...(address ? { address } : {}),
             },
