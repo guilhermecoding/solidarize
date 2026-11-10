@@ -92,3 +92,88 @@ model Verification {
   @@map("verification")
   @@schema("system-auth")
 }
+
+model Beneficiary {
+  id            String                 @id @default(uuid())
+  name          String
+  cpf           String?
+  street        String
+  neighborhood  String
+  city          String
+  state         String
+  email         String?
+  dateOfBirth   DateTime
+  gender        String
+  maritalStatus String
+  employment    String
+  profession    String?
+  notes         String?
+  status        String
+  aidType       String
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  contacts      BeneficiaryContact[]
+  members       FamilyMember[]
+
+  @@unique([cpf])
+  @@index([name])
+  @@map("beneficiary")
+  @@schema("public")
+}
+
+model BeneficiaryContact {
+  id            String      @id @default(uuid())
+  phone         String
+  position      Int
+  beneficiaryId String
+  beneficiary   Beneficiary @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  createdAt     DateTime    @default(now())
+
+  @@index([beneficiaryId])
+  @@map("beneficiary_contact")
+  @@schema("public")
+}
+
+model FamilyMember {
+  id             String                @id @default(uuid())
+  beneficiaryId  String
+  beneficiary    Beneficiary           @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  name           String
+  kinship        String
+  cpf            String?
+  street         String?
+  neighborhood   String?
+  city           String?
+  state          String?
+  email          String?
+  dateOfBirth    DateTime?
+  gender         String?
+  maritalStatus  String?
+  employment     String?
+  profession     String?
+  notes          String?
+  status         String?
+  aidType        String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  contacts       FamilyMemberContact[]
+
+  @@unique([cpf])
+  @@index([beneficiaryId])
+  @@index([name])
+  @@map("family_member")
+  @@schema("public")
+}
+
+model FamilyMemberContact {
+  id             String       @id @default(uuid())
+  phone          String
+  position       Int
+  familyMemberId String
+  familyMember   FamilyMember @relation(fields: [familyMemberId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([familyMemberId])
+  @@map("family_member_contact")
+  @@schema("public")
+}

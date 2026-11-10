@@ -1,6 +1,7 @@
 import { LoginForm } from "@/app/entrar/_components/login-form";
 import IconLogo from "@/components/logo/icon-logo";
 import TextLogo from "@/components/logo/text-logo";
+import { LoginLightLock } from "@/components/theme-provider";
 import type { Metadata } from "next";
 import Image from "next/image";
 import CopyReference from "./_components/copy-reference";
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export default function LoginPage() {
   return (
     <div className="grid min-h-svh lg:grid-cols-2">
+      <LoginLightLock />
       <div className="relative hidden bg-muted lg:block">
         <Image
           src="/login-image.png"
