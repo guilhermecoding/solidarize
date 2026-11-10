@@ -661,7 +661,7 @@ function TextField({
         <Field data-invalid={invalid || undefined}>
             <div className="flex items-center gap-2">
                 {icon && <HugeiconsIcon icon={icon} strokeWidth={2} className="pointer-events-none size-4" />}
-                <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+                <FieldLabel htmlFor={field.name} required>{label}</FieldLabel>
             </div>
             <Input
                 id={field.name}
@@ -697,7 +697,7 @@ function AccessField({
                 <FieldContent>
                     <div className="flex items-center gap-2">
                         <HugeiconsIcon icon={PowerIcon} strokeWidth={2} className="pointer-events-none size-4" />
-                        <FieldLabel htmlFor={field.name}>Status do Usuário</FieldLabel>
+                        <FieldLabel htmlFor={field.name} required>Status do Usuário</FieldLabel>
                     </div>
                     <FieldDescription>{userAccessLabels[field.state.value]}</FieldDescription>
                 </FieldContent>
@@ -739,7 +739,7 @@ function ChoiceField({
         <Field data-invalid={invalid || undefined}>
             <div className="flex items-center gap-2">
                 {icon && <HugeiconsIcon icon={icon} strokeWidth={2} className="pointer-events-none size-4" />}
-                <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+                <FieldLabel htmlFor={field.name} required>{label}</FieldLabel>
             </div>
             <Select value={field.state.value} items={options} onValueChange={onChange}>
                 <SelectTrigger

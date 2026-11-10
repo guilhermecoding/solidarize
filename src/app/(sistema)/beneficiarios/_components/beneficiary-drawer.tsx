@@ -232,7 +232,11 @@ export function BeneficiaryDrawer({
 
     return (
         <>
-            <Dialog open={open} onOpenChange={handleOpenChange}>
+            <Dialog
+                open={open}
+                onOpenChange={handleOpenChange}
+                disablePointerDismissal
+            >
                 <DialogContent className="flex max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[min(64rem,calc(100%-2rem))]">
                     <DialogHeader className="shrink-0 px-6 pt-6 pr-14">
                         <DialogTitle className="text-xl font-bold">{title}</DialogTitle>
@@ -336,6 +340,7 @@ function BeneficiaryForm({
                                 placeholder="Ex: João da Silva"
                                 attempts={submissionAttempts}
                                 icon={UserCircleIcon}
+                                required
                             />
                         )}
                     </form.Field>
@@ -375,7 +380,7 @@ function BeneficiaryForm({
                         {(field) => (
                             <div className="flex flex-col gap-3">
                                 <div className="flex items-center justify-between gap-3">
-                                    <FieldLabel>Contatos</FieldLabel>
+                                    <FieldLabel required>Contatos</FieldLabel>
                                     <Button type="button" variant="outline" size="sm" onClick={() => field.pushValue("")}>
                                         <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
                                         Adicionar contato
@@ -395,6 +400,7 @@ function BeneficiaryForm({
                                                         attempts={submissionAttempts}
                                                         format={formatContact}
                                                         icon={Call02Icon}
+                                                        required
                                                     />
                                                 </div>
                                                 {field.state.value.length > 1 ? (
@@ -429,6 +435,7 @@ function BeneficiaryForm({
                                     attempts={submissionAttempts}
                                     format={formatDateOfBirthInput}
                                     icon={BirthdayCakeIcon}
+                                    required
                                 />
                             )}
                         </form.Field>
@@ -439,6 +446,7 @@ function BeneficiaryForm({
                                     label="Gênero"
                                     attempts={submissionAttempts}
                                     placeholder="Selecione"
+                                    required
                                     options={beneficiaryGenders.map((gender) => ({
                                         value: gender,
                                         label: beneficiaryGenderLabels[gender],
@@ -455,6 +463,7 @@ function BeneficiaryForm({
                                     label="Estado Civil"
                                     attempts={submissionAttempts}
                                     placeholder="Selecione"
+                                    required
                                     options={maritalStatuses.map((status) => ({
                                         value: status,
                                         label: maritalStatusLabels[status],
@@ -475,6 +484,7 @@ function BeneficiaryForm({
                                     placeholder="Ex: Rua das Flores, 123"
                                     attempts={submissionAttempts}
                                     icon={Location01Icon}
+                                    required
                                 />
                             )}
                         </form.Field>
@@ -485,6 +495,7 @@ function BeneficiaryForm({
                                     label="Bairro"
                                     placeholder="Ex: Centro"
                                     attempts={submissionAttempts}
+                                    required
                                 />
                             )}
                         </form.Field>
@@ -495,6 +506,7 @@ function BeneficiaryForm({
                                     label="Cidade"
                                     placeholder="Ex: São Paulo"
                                     attempts={submissionAttempts}
+                                    required
                                 />
                             )}
                         </form.Field>
@@ -505,6 +517,7 @@ function BeneficiaryForm({
                                     label="UF"
                                     attempts={submissionAttempts}
                                     placeholder="Selecione"
+                                    required
                                     options={brazilianStates.map((state) => ({
                                         value: state,
                                         label: state,
@@ -523,6 +536,7 @@ function BeneficiaryForm({
                                     label="Trabalho"
                                     attempts={submissionAttempts}
                                     placeholder="Selecione"
+                                    required
                                     options={employments.map((item) => ({
                                         value: item,
                                         label: employmentLabels[item],
@@ -546,6 +560,7 @@ function BeneficiaryForm({
                                         label="Profissão"
                                         placeholder="Ex: Costureira"
                                         attempts={submissionAttempts}
+                                        required
                                     />
                                 )}
                             </form.Field>
@@ -557,6 +572,7 @@ function BeneficiaryForm({
                                     label="Situação"
                                     attempts={submissionAttempts}
                                     placeholder="Selecione"
+                                    required
                                     options={beneficiaryStatuses.map((status) => ({
                                         value: status,
                                         label: beneficiaryStatusLabels[status],
@@ -572,6 +588,7 @@ function BeneficiaryForm({
                                     label="Tipo de Auxílio"
                                     attempts={submissionAttempts}
                                     placeholder="Selecione"
+                                    required
                                     options={aidTypes.map((aidType) => ({
                                         value: aidType,
                                         label: aidTypeLabels[aidType],
@@ -620,6 +637,7 @@ function BeneficiaryForm({
                                                         placeholder="Ex: Maria da Silva"
                                                         attempts={submissionAttempts}
                                                         icon={UserCircleIcon}
+                                                        required
                                                     />
                                                 )}
                                             </form.Field>
@@ -657,6 +675,7 @@ function BeneficiaryForm({
                                                             label="Vínculo"
                                                             attempts={submissionAttempts}
                                                             placeholder="Selecione"
+                                                            required
                                                             options={kinshipOptions}
                                                             onChange={(value) => kinshipField.handleChange(value ?? "")}
                                                         />
@@ -819,6 +838,7 @@ function FamilyMemberFields({
                                                 attempts={attempts}
                                                 format={formatContact}
                                                 icon={Call02Icon}
+                                                required
                                             />
                                         </div>
                                         <Button
@@ -899,6 +919,7 @@ function FamilyMemberFields({
                             label="Profissão"
                             placeholder="Ex: Pedreiro"
                             attempts={attempts}
+                            required
                         />
                     )}
                 </form.Field>
@@ -982,6 +1003,7 @@ function TextField({
     icon,
     serverError,
     onEdit,
+    required = false,
     ...inputProps
 }: {
     field: TextFieldApi;
@@ -991,6 +1013,7 @@ function TextField({
     icon?: IconSvgElement;
     serverError?: string;
     onEdit?: () => void;
+    required?: boolean;
 } & Omit<React.ComponentProps<typeof Input>, "value" | "onChange" | "onBlur" | "id" | "name">) {
     const errors = [
         ...visibleErrors(field, attempts),
@@ -1002,11 +1025,12 @@ function TextField({
         <Field data-invalid={invalid || undefined}>
             <div className="flex items-center gap-2">
                 {icon ? <HugeiconsIcon icon={icon} strokeWidth={2} className="pointer-events-none size-4" /> : null}
-                <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+                <FieldLabel htmlFor={field.name} required={required}>{label}</FieldLabel>
             </div>
             <Input
                 id={field.name}
                 name={field.name}
+                required={required}
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(event) => {
@@ -1062,6 +1086,7 @@ function ChoiceField({
     onChange,
     placeholder,
     icon,
+    required = false,
 }: {
     field: TextFieldApi;
     label: string;
@@ -1070,6 +1095,7 @@ function ChoiceField({
     onChange: (value: string | null) => void;
     placeholder: string;
     icon?: IconSvgElement;
+    required?: boolean;
 }) {
     const errors = visibleErrors(field, attempts);
     const invalid = errors.length > 0;
@@ -1078,10 +1104,10 @@ function ChoiceField({
         <Field data-invalid={invalid || undefined}>
             <div className="flex items-center gap-2">
                 {icon ? <HugeiconsIcon icon={icon} strokeWidth={2} className="pointer-events-none size-4" /> : null}
-                <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+                <FieldLabel htmlFor={field.name} required={required}>{label}</FieldLabel>
             </div>
             <Select value={field.state.value === "" ? null : field.state.value} items={options} onValueChange={onChange}>
-                <SelectTrigger id={field.name} className="text-base" aria-invalid={invalid || undefined} onBlur={field.handleBlur}>
+                <SelectTrigger id={field.name} className="text-base" aria-required={required || undefined} aria-invalid={invalid || undefined} onBlur={field.handleBlur}>
                     <SelectValue placeholder={placeholder} />
                 </SelectTrigger>
                 <SelectContent>
