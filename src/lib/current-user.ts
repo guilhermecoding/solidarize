@@ -11,6 +11,8 @@ export type CurrentUser = {
     name: string;
     email: string;
     avatar: string;
+    role: string;
+    permission: string;
 };
 
 export async function getCurrentUser(): Promise<CurrentUser> {
@@ -30,5 +32,7 @@ export async function getCurrentUser(): Promise<CurrentUser> {
         name: session.user.name,
         email: session.user.email,
         avatar: session.user.image ?? "",
+        role: session.user.role ?? "member",
+        permission: session.user.permission ?? "read",
     };
 }
