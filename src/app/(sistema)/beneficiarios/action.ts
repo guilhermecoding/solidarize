@@ -64,7 +64,7 @@ export const updateBeneficiaryAction = beneficiaryWriteActionClient
 export const deleteBeneficiaryAction = beneficiaryWriteActionClient
     .inputSchema(deleteBeneficiarySchema)
     .action(async ({ parsedInput }) => {
-        const result = await deleteBeneficiary(parsedInput.id);
+        const result = await deleteBeneficiary(parsedInput.id, parsedInput.password);
 
         if (result.ok) {
             refreshBeneficiaries(parsedInput.id);

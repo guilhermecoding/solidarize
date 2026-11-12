@@ -1,10 +1,13 @@
 import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
+import { headers } from "next/headers";
+import { APIError } from "better-auth/api";
 
 import { serverFailure, serverSuccess, type ServerFailure, type ServerResponse } from "@/@types/server-response";
 import { Prisma } from "@/generated/prisma/client";
 import { beneficiaryFormSchema } from "@/app/(sistema)/beneficiarios/schema";
+import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { formatContact, normalizeContact } from "@/lib/validate-contact";
 import { formatCpf, normalizeCpf } from "@/lib/validate-cpf";
@@ -365,7 +368,26 @@ export async function updateBeneficiary(
     }
 }
 
-export async function deleteBeneficiary(id: string): Promise<ServerResponse> {
+export async function deleteBeneficiary(id: string, password: string): Promise<ServerResponse> {
+    const requestHeaders = await headers();
+
+    try {
+        await auth.api.verifyPassword({
+            body: { password },
+            headers: requestHeaders,
+        });
+    } catch (error) {
+        if (error instanceof APIError) {
+            if (readErrorCode(error) === "INVALID_PASSWORD") {
+                return serverFailure("Senha incorreta.");
+            }
+
+            return serverFailure("Não foi possível confirmar a senha.");
+        }
+
+        throw error;
+    }
+
     const current = await prisma.beneficiary.findUnique({
         where: { id },
         select: { id: true },
@@ -671,4 +693,14 @@ function uniqueCpfFailure(error: unknown): ServerFailure | null {
     }
 
     return serverFailure("Não foi possível salvar o beneficiário.");
+}
+
+function readErrorCode(error: APIError): string | null {
+    const body = error.body;
+
+    if (!body || typeof body !== "object" || !("code" in body)) {
+        return null;
+    }
+
+    return typeof body.code === "string" ? body.code : null;
 }

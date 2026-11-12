@@ -193,6 +193,7 @@ export const searchBeneficiariesSchema = z.object({
 
 export const deleteBeneficiarySchema = z.object({
     id: z.string().min(1, "Beneficiário inválido."),
+    password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres."),
 });
 
 export type BeneficiaryFormValues = z.infer<typeof beneficiaryFormSchema>;

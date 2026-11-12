@@ -18,6 +18,7 @@ import {
     type FamilyMemberFormValues,
 } from "@/app/(sistema)/beneficiarios/schema";
 import SeparatorSection from "@/components/separator-section";
+import { AdminPasswordDialog } from "@/components/shared/admin-password-dialog";
 import { SystemDialog } from "@/components/shared/system-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -106,8 +107,9 @@ export function BeneficiaryDrawer({
     const router = useRouter();
     const isMobile = useIsMobile();
     const [confirmOpen, setConfirmOpen] = useState(false);
+    const [passwordOpen, setPasswordOpen] = useState(false);
     const [successOpen, setSuccessOpen] = useState(false);
-    const { executeAsync: removeBeneficiary, isPending: isDeleting } = useAction(deleteBeneficiaryAction);
+    const { executeAsync: removeBeneficiary } = useAction(deleteBeneficiaryAction);
     const title = beneficiary ? "Editar Beneficiário" : "Adicionar Beneficiário";
     const description = beneficiary
         ? "Atualize os dados do titular e dos membros da família."
@@ -116,29 +118,15 @@ export function BeneficiaryDrawer({
     function handleOpenChange(nextOpen: boolean) {
         if (!nextOpen) {
             setConfirmOpen(false);
+            setPasswordOpen(false);
         }
 
         onOpenChange(nextOpen);
     }
 
-    async function handleDelete() {
-        if (!beneficiary) {
-            return;
-        }
-
-        const result = await removeBeneficiary({ id: beneficiary.id });
-
-        if (result?.serverError) {
-            notify("error", result.serverError);
-            return;
-        }
-
-        if (!result?.data?.ok) {
-            notify("error", result?.data?.message ?? "Não foi possível excluir o beneficiário.");
-            return;
-        }
-
+    function handleDeleted() {
         setConfirmOpen(false);
+        setPasswordOpen(false);
         onOpenChange(false);
         setSuccessOpen(true);
         onDeleted();
@@ -165,10 +153,17 @@ export function BeneficiaryDrawer({
                 description="Tem certeza disso? Esta ação exclui o titular e os membros da família."
                 actions={
                     <>
-                        <Button type="button" variant="outline" disabled={isDeleting} onClick={() => setConfirmOpen(false)}>
+                        <Button type="button" variant="outline" onClick={() => setConfirmOpen(false)}>
                             Cancelar
                         </Button>
-                        <Button type="button" variant="destructive" loading={isDeleting} loadingText="Excluindo" onClick={() => void handleDelete()}>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => {
+                                setConfirmOpen(false);
+                                setPasswordOpen(true);
+                            }}
+                        >
                             Confirmar
                         </Button>
                     </>
@@ -181,6 +176,35 @@ export function BeneficiaryDrawer({
                     </p>
                 </div>
             </SystemDialog>
+            <AdminPasswordDialog
+                open={passwordOpen}
+                onOpenChange={setPasswordOpen}
+                onConfirm={async (password) => {
+                    if (!beneficiary) {
+                        return { ok: false, message: "Beneficiário inválido." };
+                    }
+
+                    const result = await removeBeneficiary({ id: beneficiary.id, password });
+
+                    if (result?.serverError) {
+                        return { ok: false, message: result.serverError };
+                    }
+
+                    if (result?.validationErrors) {
+                        return { ok: false, message: "A senha deve ter pelo menos 8 caracteres." };
+                    }
+
+                    if (!result?.data?.ok) {
+                        return {
+                            ok: false,
+                            message: result?.data?.message ?? "Não foi possível excluir o beneficiário.",
+                        };
+                    }
+
+                    return { ok: true };
+                }}
+                onSuccess={handleDeleted}
+            />
             <SystemDialog
                 mode="auto-close"
                 open={successOpen}
