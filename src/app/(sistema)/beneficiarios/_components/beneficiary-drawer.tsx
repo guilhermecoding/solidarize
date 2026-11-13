@@ -14,6 +14,7 @@ import {
     beneficiaryFormSchema,
     emptyBeneficiaryFormValues,
     emptyFamilyMemberFormValues,
+    familyMemberFormSchema,
     type BeneficiaryFormValues,
     type FamilyMemberFormValues,
 } from "@/app/(sistema)/beneficiarios/schema";
@@ -81,6 +82,7 @@ import {
     IdCardIcon,
     Location01Icon,
     Mail02Icon,
+    ArrowDown01Icon,
     UserCircleIcon,
     UserRemove01Icon,
     VenusAndMarsIcon,
@@ -669,94 +671,24 @@ function BeneficiaryForm({
                     <form.Field name="members" mode="array">
                         {(field) => (
                             <div className="flex flex-col gap-4">
-                                {field.state.value.map((member, index) => {
-                                    const current = members[index] ?? member;
-                                    const kinshipOptions = kinshipOptionsForGender(current.gender).map((kinship) => ({
-                                        value: kinship,
-                                        label: kinshipLabel(kinship, current.gender),
-                                    }));
-
-                                    return (
-                                        <div key={member.id || index} className="flex flex-col gap-4 rounded-2xl border p-4">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <p className="font-medium">Familiar {index + 1}</p>
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    className="text-muted-foreground"
-                                                    onClick={() => field.removeValue(index)}
-                                                >
-                                                    <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-                                                    Remover
-                                                </Button>
-                                            </div>
-                                            <form.Field name={`members[${index}].name`}>
-                                                {(nameField) => (
-                                                    <TextField
-                                                        field={nameField}
-                                                        label="Nome Completo"
-                                                        placeholder="Ex: Maria da Silva"
-                                                        attempts={submissionAttempts}
-                                                        icon={UserCircleIcon}
-                                                        required
-                                                    />
-                                                )}
-                                            </form.Field>
-                                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                                <form.Field name={`members[${index}].gender`}>
-                                                    {(genderField) => (
-                                                        <ChoiceField
-                                                            field={genderField}
-                                                            label="Gênero"
-                                                            attempts={submissionAttempts}
-                                                            placeholder="Não informado"
-                                                            options={optionalOptions(beneficiaryGenders.map((gender) => ({
-                                                                value: gender,
-                                                                label: beneficiaryGenderLabels[gender],
-                                                            })))}
-                                                            onChange={(value) => {
-                                                                const nextGender = value ?? "";
-                                                                const kinship = isKinshipAllowed(current.kinship, nextGender)
-                                                                    ? current.kinship
-                                                                    : "";
-                                                                field.replaceValue(index, {
-                                                                    ...current,
-                                                                    gender: nextGender,
-                                                                    kinship,
-                                                                });
-                                                            }}
-                                                            icon={VenusAndMarsIcon}
-                                                        />
-                                                    )}
-                                                </form.Field>
-                                                <form.Field name={`members[${index}].kinship`}>
-                                                    {(kinshipField) => (
-                                                        <ChoiceField
-                                                            field={kinshipField}
-                                                            label="Vínculo"
-                                                            attempts={submissionAttempts}
-                                                            placeholder="Selecione"
-                                                            required
-                                                            options={kinshipOptions}
-                                                            onChange={(value) => kinshipField.handleChange(value ?? "")}
-                                                        />
-                                                    )}
-                                                </form.Field>
-                                            </div>
-                                            <FamilyMemberFields
-                                                form={form}
-                                                index={index}
-                                                attempts={submissionAttempts}
-                                                takenCpf={takenCpf}
-                                                onEditCpf={(value) => {
-                                                    setTakenCpf((cpf) => cpf === normalizeCpf(value) || cpf === "*" ? null : cpf);
-                                                }}
-                                                member={current}
-                                                membersField={field}
-                                            />
-                                        </div>
-                                    );
-                                })}
+                                {field.state.value.length === 0 ? (
+                                    <p className="text-muted-foreground">Nenhum membro familiar cadastrado</p>
+                                ) : null}
+                                {field.state.value.map((member, index) => (
+                                    <FamilyMemberCard
+                                        key={member.id || index}
+                                        form={form}
+                                        index={index}
+                                        member={members[index] ?? member}
+                                        attempts={submissionAttempts}
+                                        takenCpf={takenCpf}
+                                        onEditCpf={(value) => {
+                                            setTakenCpf((cpf) => cpf === normalizeCpf(value) || cpf === "*" ? null : cpf);
+                                        }}
+                                        onRemove={() => field.removeValue(index)}
+                                        membersField={field}
+                                    />
+                                ))}
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -843,6 +775,157 @@ function useBeneficiaryFormShape() {
 type BeneficiaryFormApi = ReturnType<typeof useBeneficiaryFormShape>;
 
 void useBeneficiaryFormShape;
+
+function FamilyMemberCard({
+    form,
+    index,
+    member,
+    attempts,
+    takenCpf,
+    onEditCpf,
+    onRemove,
+    membersField,
+}: {
+    form: BeneficiaryFormApi;
+    index: number;
+    member: FamilyMemberFormValues;
+    attempts: number;
+    takenCpf: string | null;
+    onEditCpf: (value: string) => void;
+    onRemove: () => void;
+    membersField: {
+        replaceValue: (index: number, value: FamilyMemberFormValues) => void;
+    };
+}) {
+    const [detailsOpen, setDetailsOpen] = useState(false);
+    const [seenAttempts, setSeenAttempts] = useState(attempts);
+    const kinshipOptions = kinshipOptionsForGender(member.gender).map((kinship) => ({
+        value: kinship,
+        label: kinshipLabel(kinship, member.gender),
+    }));
+
+    if (attempts !== seenAttempts) {
+        setSeenAttempts(attempts);
+
+        if (familyMemberHasHiddenError(member)) {
+            setDetailsOpen(true);
+        }
+    }
+
+    return (
+        <div className="flex flex-col gap-4 rounded-2xl border p-4">
+            <div className="flex items-center justify-between gap-3">
+                <p className="font-medium">Familiar {index + 1}</p>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-muted-foreground"
+                    onClick={onRemove}
+                >
+                    <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
+                    Remover
+                </Button>
+            </div>
+            <form.Field name={`members[${index}].name`}>
+                {(nameField) => (
+                    <TextField
+                        field={nameField}
+                        label="Nome Completo"
+                        placeholder="Ex: Maria da Silva"
+                        attempts={attempts}
+                        icon={UserCircleIcon}
+                        required
+                    />
+                )}
+            </form.Field>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <form.Field name={`members[${index}].gender`}>
+                    {(genderField) => (
+                        <ChoiceField
+                            field={genderField}
+                            label="Gênero"
+                            attempts={attempts}
+                            placeholder="Selecione"
+                            required
+                            options={beneficiaryGenders.map((gender) => ({
+                                value: gender,
+                                label: beneficiaryGenderLabels[gender],
+                            }))}
+                            onChange={(value) => {
+                                const nextGender = value ?? "";
+                                const kinship = isKinshipAllowed(member.kinship, nextGender)
+                                    ? member.kinship
+                                    : "";
+                                membersField.replaceValue(index, {
+                                    ...member,
+                                    gender: nextGender,
+                                    kinship,
+                                });
+                            }}
+                            icon={VenusAndMarsIcon}
+                        />
+                    )}
+                </form.Field>
+                <form.Field name={`members[${index}].kinship`}>
+                    {(kinshipField) => (
+                        <ChoiceField
+                            field={kinshipField}
+                            label="Vínculo"
+                            attempts={attempts}
+                            placeholder="Selecione"
+                            required
+                            options={kinshipOptions}
+                            onChange={(value) => kinshipField.handleChange(value ?? "")}
+                        />
+                    )}
+                </form.Field>
+            </div>
+            <Button
+                type="button"
+                variant="ghost"
+                className="w-full text-muted-foreground"
+                aria-expanded={detailsOpen}
+                onClick={() => setDetailsOpen((open) => !open)}
+            >
+                <HugeiconsIcon
+                    icon={ArrowDown01Icon}
+                    strokeWidth={2}
+                    className={cn("transition-transform", detailsOpen && "rotate-180")}
+                />
+                {detailsOpen ? "Ocultar informações" : "Mostrar informações"}
+            </Button>
+            {detailsOpen ? (
+                <FamilyMemberFields
+                    form={form}
+                    index={index}
+                    attempts={attempts}
+                    takenCpf={takenCpf}
+                    onEditCpf={onEditCpf}
+                    member={member}
+                    membersField={membersField}
+                />
+            ) : null}
+        </div>
+    );
+}
+
+function familyMemberHasHiddenError(member: FamilyMemberFormValues): boolean {
+    if (member.employment === "employed" && member.profession.trim().length < 2) {
+        return true;
+    }
+
+    const parsed = familyMemberFormSchema.safeParse(member);
+
+    if (parsed.success) {
+        return false;
+    }
+
+    return parsed.error.issues.some((issue) => {
+        const field = String(issue.path[0] ?? "");
+
+        return field !== "name" && field !== "gender" && field !== "kinship";
+    });
+}
 
 function FamilyMemberFields({
     form,

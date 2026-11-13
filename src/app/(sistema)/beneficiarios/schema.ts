@@ -89,7 +89,7 @@ export const familyMemberFormSchema = z.object({
     email: optionalEmailSchema,
     contacts: contactListSchema(false),
     dateOfBirth: optionalBirthDateSchema,
-    gender: optionalChoice(beneficiaryGenders, "Selecione o gênero."),
+    gender: requiredChoice(beneficiaryGenders, "Selecione o gênero."),
     maritalStatus: optionalChoice(maritalStatuses, "Selecione o estado civil."),
     employment: optionalChoice(employments, "Selecione a situação de trabalho."),
     profession: z.string().trim(),
