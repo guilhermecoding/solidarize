@@ -40,9 +40,6 @@ export async function BeneficiaryDetailSection({ id }: { id: string }) {
                     canWrite={canWrite}
                 />
             </div>
-            <Link href="/beneficiarios" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
-                Voltar para beneficiários
-            </Link>
             <BeneficiaryRecordView beneficiary={beneficiary} />
         </>
     );
