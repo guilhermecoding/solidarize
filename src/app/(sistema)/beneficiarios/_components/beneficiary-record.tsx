@@ -81,7 +81,7 @@ export function BeneficiaryRecordView({
                         <Table>
                             <TableHeader>
                                 <TableRow className="hover:bg-transparent">
-                                    <TableHead>Nome</TableHead>
+                                    <TableHead className="text-muted-foreground">Nome</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
