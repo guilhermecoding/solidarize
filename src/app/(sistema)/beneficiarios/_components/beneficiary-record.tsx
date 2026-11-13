@@ -8,6 +8,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import {
     aidTypeLabels,
     beneficiaryGenderLabels,
@@ -19,7 +20,11 @@ import {
 
 const EMPTY = "Não informado";
 
-export function BeneficiaryRecordView({ beneficiary }: { beneficiary: BeneficiaryRecord }) {
+export function BeneficiaryRecordView({
+    beneficiary,
+}: {
+    beneficiary: BeneficiaryRecord;
+}) {
     const rows = titularRows(beneficiary);
 
     return (
@@ -30,15 +35,35 @@ export function BeneficiaryRecordView({ beneficiary }: { beneficiary: Beneficiar
                     <Table>
                         <TableHeader>
                             <TableRow className="hover:bg-transparent">
-                                <TableHead>Campo</TableHead>
-                                <TableHead>Informação</TableHead>
+                                <TableHead className="text-muted-foreground">
+                                    Campo
+                                </TableHead>
+                                <TableHead className="text-muted-foreground">
+                                    Informação
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {rows.map((row) => (
-                                <TableRow key={row.label} className="odd:bg-background even:bg-muted/50">
-                                    <TableCell className="font-medium whitespace-normal">{row.label}</TableCell>
-                                    <TableCell className="whitespace-normal">{row.value}</TableCell>
+                                <TableRow
+                                    key={row.label}
+                                    className="odd:bg-background even:bg-muted/50"
+                                >
+                                    <TableCell className="font-semibold whitespace-normal">
+                                        {row.label}
+                                    </TableCell>
+                                    <TableCell
+                                        className={cn("whitespace-normal", {
+                                            "text-green-500 font-bold":
+                                                row.label === "Situação" &&
+                                                row.value === beneficiaryStatusLabels.approved,
+                                            "text-red-500 font-bold":
+                                                row.label === "Situação" &&
+                                                row.value === beneficiaryStatusLabels.rejected,
+                                        })}
+                                    >
+                                        {row.value}
+                                    </TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>
@@ -48,7 +73,9 @@ export function BeneficiaryRecordView({ beneficiary }: { beneficiary: Beneficiar
             <section className="flex flex-col gap-3">
                 <h2 className="text-lg font-medium">Membros da Família</h2>
                 {beneficiary.members.length === 0 ? (
-                    <p className="text-muted-foreground">Nenhum membro familiar do titular registrado</p>
+                    <p className="text-muted-foreground">
+                        Nenhum membro familiar do titular registrado
+                    </p>
                 ) : (
                     <div className="overflow-hidden rounded-xl border bg-background">
                         <Table>
@@ -59,10 +86,17 @@ export function BeneficiaryRecordView({ beneficiary }: { beneficiary: Beneficiar
                             </TableHeader>
                             <TableBody>
                                 {beneficiary.members.map((member) => (
-                                    <TableRow key={member.id} className="odd:bg-background even:bg-muted/50">
+                                    <TableRow
+                                        key={member.id}
+                                        className="odd:bg-background even:bg-muted/50"
+                                    >
                                         <TableCell className="whitespace-normal">
-                                            <p className="font-medium">{member.name}</p>
-                                            <p className="text-sm text-muted-foreground">{member.kinshipLabel}</p>
+                                            <p className="font-medium">
+                                                {member.name}
+                                            </p>
+                                            <p className="text-sm text-muted-foreground">
+                                                {member.kinshipLabel}
+                                            </p>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -75,23 +109,40 @@ export function BeneficiaryRecordView({ beneficiary }: { beneficiary: Beneficiar
     );
 }
 
-function titularRows(beneficiary: BeneficiaryRecord): Array<{ label: string; value: ReactNode }> {
+function titularRows(
+    beneficiary: BeneficiaryRecord,
+): Array<{ label: string; value: ReactNode }> {
     return [
         { label: "Nome Completo", value: beneficiary.name },
         { label: "CPF", value: text(beneficiary.cpf) },
         { label: "E-mail", value: text(beneficiary.email) },
-        { label: "Contatos", value: <ContactList contacts={beneficiary.contacts} /> },
+        {
+            label: "Contatos",
+            value: <ContactList contacts={beneficiary.contacts} />,
+        },
         { label: "Data de Nascimento", value: beneficiary.dateOfBirth },
         { label: "Idade", value: beneficiary.ageLabel },
         { label: "Gênero", value: beneficiaryGenderLabels[beneficiary.gender] },
-        { label: "Estado Civil", value: maritalStatusLabels[beneficiary.maritalStatus] },
+        {
+            label: "Estado Civil",
+            value: maritalStatusLabels[beneficiary.maritalStatus],
+        },
         { label: "Rua", value: beneficiary.street },
         { label: "Bairro", value: beneficiary.neighborhood },
         { label: "Cidade", value: beneficiary.city },
         { label: "UF", value: beneficiary.state },
         { label: "Trabalho", value: employmentLabels[beneficiary.employment] },
-        { label: "Profissão", value: beneficiary.employment === "employed" ? text(beneficiary.profession) : EMPTY },
-        { label: "Situação", value: beneficiaryStatusLabels[beneficiary.status] },
+        {
+            label: "Profissão",
+            value:
+                beneficiary.employment === "employed"
+                    ? text(beneficiary.profession)
+                    : EMPTY,
+        },
+        {
+            label: "Situação",
+            value: beneficiaryStatusLabels[beneficiary.status],
+        },
         { label: "Tipo de Auxílio", value: aidTypeLabels[beneficiary.aidType] },
         { label: "Observações", value: text(beneficiary.notes) },
     ];
