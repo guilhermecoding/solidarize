@@ -24,7 +24,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { SidebarLeftIcon } from "@hugeicons/core-free-icons";
+import { ArrowRight01Icon, SidebarLeftIcon } from "@hugeicons/core-free-icons";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -302,7 +302,40 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
   );
 }
 
-function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
+function SidebarEdgeToggle() {
+  const { isMobile, state, toggleSidebar } = useSidebar();
+  const expanded = state === "expanded";
+
+  if (isMobile) {
+    return null;
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="icon-sm"
+      data-slot="sidebar-edge-toggle"
+      aria-label={expanded ? "Fechar menu" : "Abrir menu"}
+      aria-expanded={expanded}
+      onClick={toggleSidebar}
+      className={cn(
+        "fixed top-1/2 z-20 hidden -translate-y-1/2 rounded-full border-border bg-background shadow-sm transition-[left] duration-200 ease-linear md:inline-flex active:-translate-y-1/2!",
+        expanded
+          ? "left-(--sidebar-width) -translate-x-1/2 active:-translate-x-1/2!"
+          : "left-4"
+      )}
+    >
+      <HugeiconsIcon
+        icon={ArrowRight01Icon}
+        strokeWidth={2}
+        className={cn("transition-transform", expanded && "rotate-180")}
+      />
+    </Button>
+  );
+}
+
+function SidebarInset({ className, children, ...props }: React.ComponentProps<"main">) {
   return (
     <main
       data-slot="sidebar-inset"
@@ -311,7 +344,10 @@ function SidebarInset({ className, ...props }: React.ComponentProps<"main">) {
         className
       )}
       {...props}
-    />
+    >
+      <SidebarEdgeToggle />
+      {children}
+    </main>
   );
 }
 
