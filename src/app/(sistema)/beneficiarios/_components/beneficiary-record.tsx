@@ -105,6 +105,34 @@ export function BeneficiaryRecordView({
                     </div>
                 )}
             </section>
+            <section className="flex flex-col gap-3">
+                <h2 className="text-lg font-medium">Assistentes vinculados</h2>
+                {beneficiary.assistants.length === 0 ? (
+                    <p className="text-muted-foreground">Nenhum assistente vinculado</p>
+                ) : (
+                    <div className="overflow-hidden rounded-xl border bg-background">
+                        <Table>
+                            <TableHeader>
+                                <TableRow className="hover:bg-transparent">
+                                    <TableHead className="text-muted-foreground">Nome</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {beneficiary.assistants.map((assistant) => (
+                                    <TableRow
+                                        key={assistant.id}
+                                        className="odd:bg-background even:bg-muted/50"
+                                    >
+                                        <TableCell className="whitespace-normal font-medium">
+                                            {assistant.name}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                )}
+            </section>
         </div>
     );
 }

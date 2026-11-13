@@ -29,10 +29,11 @@ model User {
   banned        Boolean   @default(false)
   banReason     String?
   banExpires    DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
   sessions      Session[]
   accounts      Account[]
+  assisted      BeneficiaryAssistant[]
 
   @@unique([email])
   @@unique([cpf])
@@ -114,10 +115,23 @@ model Beneficiary {
   updatedAt     DateTime               @updatedAt
   contacts      BeneficiaryContact[]
   members       FamilyMember[]
+  assistants    BeneficiaryAssistant[]
 
   @@unique([cpf])
   @@index([name])
   @@map("beneficiary")
+  @@schema("public")
+}
+
+model BeneficiaryAssistant {
+  beneficiaryId String
+  userId        String
+  beneficiary   Beneficiary @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([beneficiaryId, userId])
+  @@index([userId])
+  @@map("beneficiary_assistant")
   @@schema("public")
 }
 

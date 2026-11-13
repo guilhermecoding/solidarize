@@ -13,18 +13,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMemberAccess } from "@/hooks/use-member-access";
 import { notify } from "@/lib/notify";
-import type { BeneficiaryRecord } from "@/services/beneficiary/beneficiary.type";
+import type { BeneficiaryAssistantRecord, BeneficiaryRecord } from "@/services/beneficiary/beneficiary.type";
 
 const SEARCH_DEBOUNCE_MS = 300;
 const PAGE_SIZE = 10;
 
 type BeneficiariesPanelProps = {
     beneficiaries: BeneficiaryRecord[];
+    assistants: BeneficiaryAssistantRecord[];
     canWrite: boolean;
 };
 
 export function BeneficiariesPanel({
     beneficiaries,
+    assistants,
     canWrite: initialCanWrite,
 }: BeneficiariesPanelProps) {
     const router = useRouter();
@@ -205,6 +207,7 @@ export function BeneficiariesPanel({
             <BeneficiaryDrawer
                 open={drawerOpen}
                 beneficiary={editing}
+                assistants={assistants}
                 onOpenChange={setDrawerOpen}
                 onSaved={handleSaved}
                 onDeleted={handleDeleted}

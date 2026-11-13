@@ -9,13 +9,15 @@ import { BeneficiaryDrawer } from "@/app/(sistema)/beneficiarios/_components/ben
 import { ResultDialog } from "@/components/shared/result-dialog";
 import { Button } from "@/components/ui/button";
 import { useMemberAccess } from "@/hooks/use-member-access";
-import type { BeneficiaryRecord } from "@/services/beneficiary/beneficiary.type";
+import type { BeneficiaryAssistantRecord, BeneficiaryRecord } from "@/services/beneficiary/beneficiary.type";
 
 export function BeneficiaryEditor({
     beneficiary,
+    assistants,
     canWrite: initialCanWrite,
 }: {
     beneficiary: BeneficiaryRecord;
+    assistants: BeneficiaryAssistantRecord[];
     canWrite: boolean;
 }) {
     const router = useRouter();
@@ -37,6 +39,7 @@ export function BeneficiaryEditor({
             <BeneficiaryDrawer
                 open={open}
                 beneficiary={beneficiary}
+                assistants={assistants}
                 onOpenChange={setOpen}
                 onSaved={(message) => {
                     setOpen(false);

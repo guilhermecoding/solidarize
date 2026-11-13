@@ -273,6 +273,7 @@ export type BeneficiaryInput = {
     status: string;
     aidType: string;
     members: FamilyMemberInput[];
+    assistantIds: string[];
 };
 
 export type UpdateBeneficiaryInput = BeneficiaryInput & {
@@ -302,6 +303,11 @@ export type FamilyMemberRecord = {
     aidType: string;
 };
 
+export type BeneficiaryAssistantRecord = {
+    id: string;
+    name: string;
+};
+
 export type BeneficiaryRecord = {
     id: string;
     name: string;
@@ -322,4 +328,5 @@ export type BeneficiaryRecord = {
     status: BeneficiaryStatus;
     aidType: AidType;
     members: FamilyMemberRecord[];
+    assistants: BeneficiaryAssistantRecord[];
 };

@@ -119,6 +119,22 @@ export const beneficiaryFormSchema = z.object({
     status: requiredChoice(beneficiaryStatuses, "Selecione a situação."),
     aidType: requiredChoice(aidTypes, "Selecione o tipo de auxílio."),
     members: z.array(familyMemberFormSchema),
+    assistantIds: z.array(z.string().trim().min(1)).superRefine((ids, ctx) => {
+        const seen = new Set<string>();
+
+        ids.forEach((id, index) => {
+            if (seen.has(id)) {
+                ctx.addIssue({
+                    code: "custom",
+                    message: "Assistente repetido.",
+                    path: [index],
+                });
+                return;
+            }
+
+            seen.add(id);
+        });
+    }),
 }).superRefine((value, ctx) => {
     if (value.employment === "employed" && value.profession.length < 2) {
         ctx.addIssue({
@@ -239,6 +255,7 @@ export const emptyBeneficiaryFormValues: BeneficiaryFormValues = {
     status: "",
     aidType: "",
     members: [],
+    assistantIds: [],
 };
 
 export function toBeneficiaryInput(value: BeneficiaryFormValues): BeneficiaryInput {

@@ -7,6 +7,8 @@ import TitlePage from "@/components/title-page";
 import { getCurrentUser } from "@/lib/current-user";
 import { hasReadAccess, hasWriteAccess } from "@/lib/member-access";
 import { getBeneficiary } from "@/services/beneficiary/beneficiary.service";
+import type { BeneficiaryAssistantRecord } from "@/services/beneficiary/beneficiary.type";
+import { listMembers } from "@/services/user/user.service";
 
 export async function BeneficiaryDetailSection({ id }: { id: string }) {
     const user = await getCurrentUser();
@@ -15,7 +17,11 @@ export async function BeneficiaryDetailSection({ id }: { id: string }) {
         redirect("/inicio");
     }
 
-    const beneficiary = await getBeneficiary(id);
+    const canWrite = hasWriteAccess(user);
+    const [beneficiary, assistants] = await Promise.all([
+        getBeneficiary(id),
+        canWrite ? listAssistantOptions() : Promise.resolve([]),
+    ]);
 
     if (!beneficiary) {
         notFound();
@@ -30,7 +36,8 @@ export async function BeneficiaryDetailSection({ id }: { id: string }) {
                 />
                 <BeneficiaryEditor
                     beneficiary={beneficiary}
-                    canWrite={hasWriteAccess(user)}
+                    assistants={assistants}
+                    canWrite={canWrite}
                 />
             </div>
             <Link href="/beneficiarios" className="text-sm text-muted-foreground underline-offset-4 hover:underline">
@@ -39,4 +46,13 @@ export async function BeneficiaryDetailSection({ id }: { id: string }) {
             <BeneficiaryRecordView beneficiary={beneficiary} />
         </>
     );
+}
+
+async function listAssistantOptions(): Promise<BeneficiaryAssistantRecord[]> {
+    const members = await listMembers();
+
+    return members.map((member) => ({
+        id: member.id,
+        name: member.name,
+    }));
 }

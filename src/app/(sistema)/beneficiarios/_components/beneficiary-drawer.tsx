@@ -9,6 +9,7 @@ import {
     deleteBeneficiaryAction,
     updateBeneficiaryAction,
 } from "@/app/(sistema)/beneficiarios/action";
+import { AssistantLinker } from "@/app/(sistema)/beneficiarios/_components/assistant-linker";
 import {
     beneficiaryFormSchema,
     emptyBeneficiaryFormValues,
@@ -69,6 +70,7 @@ import {
     kinshipOptionsForGender,
     maritalStatusLabels,
     maritalStatuses,
+    type BeneficiaryAssistantRecord,
     type BeneficiaryRecord,
 } from "@/services/beneficiary/beneficiary.type";
 import {
@@ -90,6 +92,7 @@ const CPF_TAKEN_FIELD_MESSAGE = "Alguém já possui este CPF!";
 type BeneficiaryDrawerProps = {
     open: boolean;
     beneficiary: BeneficiaryRecord | null;
+    assistants: BeneficiaryAssistantRecord[];
     onOpenChange: (open: boolean) => void;
     onSaved: (message: string) => void;
     onDeleted: () => void;
@@ -98,6 +101,7 @@ type BeneficiaryDrawerProps = {
 export function BeneficiaryDrawer({
     open,
     beneficiary,
+    assistants,
     onOpenChange,
     onSaved,
     onDeleted,
@@ -135,6 +139,7 @@ export function BeneficiaryDrawer({
         <BeneficiaryForm
             key={beneficiary?.id ?? "new"}
             beneficiary={beneficiary}
+            assistants={assistants}
             surface={isMobile ? "drawer" : "dialog"}
             onRequestDelete={() => setConfirmOpen(true)}
             onSaved={onSaved}
@@ -265,11 +270,13 @@ export function BeneficiaryDrawer({
 
 function BeneficiaryForm({
     beneficiary,
+    assistants,
     surface,
     onRequestDelete,
     onSaved,
 }: {
     beneficiary: BeneficiaryRecord | null;
+    assistants: BeneficiaryAssistantRecord[];
     surface: "drawer" | "dialog";
     onRequestDelete: () => void;
     onSaved: (message: string) => void;
@@ -719,6 +726,16 @@ function BeneficiaryForm({
                                     Adicionar familiar
                                 </Button>
                             </div>
+                        )}
+                    </form.Field>
+
+                    <form.Field name="assistantIds">
+                        {(field) => (
+                            <AssistantLinker
+                                assistants={assistants}
+                                selectedIds={field.state.value}
+                                onChange={field.handleChange}
+                            />
                         )}
                     </form.Field>
 
@@ -1292,5 +1309,6 @@ function toFormValues(beneficiary: BeneficiaryRecord): BeneficiaryFormValues {
             status: member.status,
             aidType: member.aidType,
         })),
+        assistantIds: beneficiary.assistants.map((assistant) => assistant.id),
     };
 }

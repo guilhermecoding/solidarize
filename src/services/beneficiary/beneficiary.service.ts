@@ -52,6 +52,13 @@ const beneficiaryInclude = {
             },
         },
     },
+    assistants: {
+        include: {
+            user: {
+                select: { id: true, name: true },
+            },
+        },
+    },
 } satisfies Prisma.BeneficiaryInclude;
 
 type BeneficiaryRow = Prisma.BeneficiaryGetPayload<{ include: typeof beneficiaryInclude }>;
@@ -102,6 +109,7 @@ type PreparedBeneficiary = {
     aidType: AidType;
     contacts: PreparedContact[];
     members: PreparedMember[];
+    assistantIds: string[];
 };
 
 type CpfReader = {
@@ -211,12 +219,21 @@ export async function createBeneficiary(
                 return { type: "cpf" as const, cpf: taken };
             }
 
+            const assistantsExist = await assistantIdsExist(tx, prepared.assistantIds);
+
+            if (!assistantsExist) {
+                return { type: "invalid-assistant" as const };
+            }
+
             const beneficiary = await tx.beneficiary.create({
                 data: {
                     ...beneficiaryData(prepared),
                     contacts: { create: prepared.contacts },
                     members: {
                         create: prepared.members.map(memberCreateData),
+                    },
+                    assistants: {
+                        create: prepared.assistantIds.map((userId) => ({ userId })),
                     },
                 },
                 select: { id: true },
@@ -227,6 +244,10 @@ export async function createBeneficiary(
 
         if (created.type === "cpf") {
             return serverFailure(cpfTakenMessage(created.cpf));
+        }
+
+        if (created.type === "invalid-assistant") {
+            return serverFailure("Um ou mais assistentes não existem.");
         }
 
         return serverSuccess({ id: created.id }, "Beneficiário adicionado com sucesso.");
@@ -281,6 +302,12 @@ export async function updateBeneficiary(
 
             if (taken) {
                 return { type: "cpf", cpf: taken } as const;
+            }
+
+            const assistantsExist = await assistantIdsExist(tx, prepared.assistantIds);
+
+            if (!assistantsExist) {
+                return { type: "invalid-assistant" } as const;
             }
 
             await tx.beneficiary.update({
@@ -341,6 +368,25 @@ export async function updateBeneficiary(
                 });
             }
 
+            await tx.beneficiaryAssistant.deleteMany({
+                where: {
+                    beneficiaryId: input.id,
+                    ...(prepared.assistantIds.length > 0
+                        ? { userId: { notIn: prepared.assistantIds } }
+                        : {}),
+                },
+            });
+
+            if (prepared.assistantIds.length > 0) {
+                await tx.beneficiaryAssistant.createMany({
+                    data: prepared.assistantIds.map((userId) => ({
+                        beneficiaryId: input.id,
+                        userId,
+                    })),
+                    skipDuplicates: true,
+                });
+            }
+
             return { type: "ok" } as const;
         });
 
@@ -350,6 +396,10 @@ export async function updateBeneficiary(
 
         if (result.type === "invalid-member") {
             return serverFailure("Membro da família inválido.");
+        }
+
+        if (result.type === "invalid-assistant") {
+            return serverFailure("Um ou mais assistentes não existem.");
         }
 
         if (result.type === "cpf") {
@@ -442,6 +492,7 @@ function prepareBeneficiary(input: BeneficiaryInput): PreparedBeneficiary | Serv
         aidType,
         contacts: toContacts(value.contacts),
         members: [],
+        assistantIds: value.assistantIds,
     };
 
     for (const member of value.members) {
@@ -617,7 +668,29 @@ function toBeneficiary(row: BeneficiaryRow): BeneficiaryRecord {
         status,
         aidType,
         members: row.members.map((member) => toFamilyMember(member)),
+        assistants: row.assistants
+            .map((assistant) => ({
+                id: assistant.user.id,
+                name: assistant.user.name,
+            }))
+            .sort((left, right) => left.name.localeCompare(right.name, "pt-BR")),
     };
+}
+
+async function assistantIdsExist(
+    db: Prisma.TransactionClient,
+    assistantIds: string[],
+): Promise<boolean> {
+    if (assistantIds.length === 0) {
+        return true;
+    }
+
+    const users = await db.user.findMany({
+        where: { id: { in: assistantIds } },
+        select: { id: true },
+    });
+
+    return users.length === assistantIds.length;
 }
 
 function toFamilyMember(row: FamilyMemberRow): FamilyMemberRecord {
