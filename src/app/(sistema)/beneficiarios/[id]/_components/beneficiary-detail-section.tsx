@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { BeneficiaryEditor } from "@/app/(sistema)/beneficiarios/[id]/_components/beneficiary-editor";
