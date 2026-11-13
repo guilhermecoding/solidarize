@@ -32,7 +32,7 @@ export default function BeneficiaryPage({
     params,
 }: Pick<PageProps<"/beneficiarios/[id]">, "params">) {
     return (
-        <Page>
+        <Page showBack>
             <Section className="flex flex-col gap-6">
                 <Suspense fallback={<BeneficiariesSkeleton />}>
                     <BeneficiaryContent params={params} />

@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 export default function BeneficiariesPage() {
     return (
-        <Page>
+        <Page showBack>
             <Section className="flex flex-col gap-6">
                 <TitlePage
                     title="Beneficiários Assistidos"
