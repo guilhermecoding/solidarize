@@ -8,6 +8,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 import { searchBeneficiariesAction } from "@/app/(sistema)/beneficiarios/action";
 import { BeneficiaryDrawer } from "@/app/(sistema)/beneficiarios/_components/beneficiary-drawer";
+import { ResultDialog } from "@/components/shared/result-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMemberAccess } from "@/hooks/use-member-access";
@@ -35,6 +36,7 @@ export function BeneficiariesPanel({
     const [results, setResults] = useState(beneficiaries);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [editing, setEditing] = useState<BeneficiaryRecord | null>(null);
+    const [savedResult, setSavedResult] = useState<{ title: string; subtitle: string } | null>(null);
     const requestId = useRef(0);
     const trimmedQuery = query.trim().replace(/\s+/g, " ");
 
@@ -99,8 +101,11 @@ export function BeneficiariesPanel({
     }
 
     function handleSaved(message: string) {
+        setSavedResult({
+            title: editing ? "Beneficiário atualizado!" : "Beneficiário adicionado",
+            subtitle: message,
+        });
         setDrawerOpen(false);
-        notify("success", message);
         router.refresh();
     }
 
@@ -203,6 +208,17 @@ export function BeneficiariesPanel({
                 onOpenChange={setDrawerOpen}
                 onSaved={handleSaved}
                 onDeleted={handleDeleted}
+            />
+            <ResultDialog
+                status="success"
+                open={savedResult !== null}
+                onOpenChange={(nextOpen) => {
+                    if (!nextOpen) {
+                        setSavedResult(null);
+                    }
+                }}
+                title={savedResult?.title ?? ""}
+                subtitle={savedResult?.subtitle ?? ""}
             />
         </>
     );

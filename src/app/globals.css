@@ -144,3 +144,9 @@
     pointer-events: none;
   }
 }
+
+/* O fade do dialog de resultado não pode usar o keyframe do dialog base.
+   Esse keyframe termina e devolve a opacidade cheia por um frame, piscando a tela. */
+.result-dialog-fade {
+  animation: none !important;
+}

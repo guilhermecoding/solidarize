@@ -6,9 +6,9 @@ import { Edit03Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import { BeneficiaryDrawer } from "@/app/(sistema)/beneficiarios/_components/beneficiary-drawer";
+import { ResultDialog } from "@/components/shared/result-dialog";
 import { Button } from "@/components/ui/button";
 import { useMemberAccess } from "@/hooks/use-member-access";
-import { notify } from "@/lib/notify";
 import type { BeneficiaryRecord } from "@/services/beneficiary/beneficiary.type";
 
 export function BeneficiaryEditor({
@@ -22,6 +22,7 @@ export function BeneficiaryEditor({
     const access = useMemberAccess();
     const canWrite = access.isPending ? initialCanWrite : access.canWrite;
     const [open, setOpen] = useState(false);
+    const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
     if (!canWrite) {
         return null;
@@ -39,12 +40,23 @@ export function BeneficiaryEditor({
                 onOpenChange={setOpen}
                 onSaved={(message) => {
                     setOpen(false);
-                    notify("success", message);
+                    setSavedMessage(message);
                     router.refresh();
                 }}
                 onDeleted={() => {
                     router.push("/beneficiarios");
                 }}
+            />
+            <ResultDialog
+                status="success"
+                open={savedMessage !== null}
+                onOpenChange={(nextOpen) => {
+                    if (!nextOpen) {
+                        setSavedMessage(null);
+                    }
+                }}
+                title="Beneficiário atualizado!"
+                subtitle={savedMessage ?? ""}
             />
         </>
     );

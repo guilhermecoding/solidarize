@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useAction } from "next-safe-action/hooks";
-import animationCheck from "@/assets/animations/lottie/check.json" with { type: "json" };
 import {
     createBeneficiaryAction,
     deleteBeneficiaryAction,
@@ -19,6 +18,7 @@ import {
 } from "@/app/(sistema)/beneficiarios/schema";
 import SeparatorSection from "@/components/separator-section";
 import { AdminPasswordDialog } from "@/components/shared/admin-password-dialog";
+import { ResultDialog } from "@/components/shared/result-dialog";
 import { SystemDialog } from "@/components/shared/system-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,7 +49,6 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { notify } from "@/lib/notify";
 import { cn } from "@/lib/utils";
 import { formatContact } from "@/lib/validate-contact";
 import { formatCpf, normalizeCpf } from "@/lib/validate-cpf";
@@ -72,7 +71,6 @@ import {
     maritalStatuses,
     type BeneficiaryRecord,
 } from "@/services/beneficiary/beneficiary.type";
-import { LordIcon } from "@lordicon/react";
 import {
     Add01Icon,
     BirthdayCakeIcon,
@@ -205,22 +203,13 @@ export function BeneficiaryDrawer({
                 }}
                 onSuccess={handleDeleted}
             />
-            <SystemDialog
-                mode="auto-close"
+            <ResultDialog
+                status="success"
                 open={successOpen}
                 onOpenChange={setSuccessOpen}
-                title="Beneficiário excluído"
-                showCloseButton={false}
-                description="Beneficiário excluído com sucesso."
-            >
-                <div className="flex flex-col items-center justify-center">
-                    <LordIcon icon={animationCheck} trigger="in" className="size-24" />
-                    <h2 className="mt-4 text-3xl font-bold">Deu certo!</h2>
-                </div>
-                <p className="text-center text-lg font-medium text-muted-foreground">
-                    Beneficiário excluído com sucesso.
-                </p>
-            </SystemDialog>
+                title="Deu certo!"
+                subtitle="Beneficiário excluído com sucesso."
+            />
         </>
     );
 
@@ -286,6 +275,7 @@ function BeneficiaryForm({
     onSaved: (message: string) => void;
 }) {
     const [takenCpf, setTakenCpf] = useState<string | null>(null);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     function showActionError(message: string) {
         if (message.startsWith("Este CPF já está em uso.")) {
@@ -294,7 +284,7 @@ function BeneficiaryForm({
         }
 
         setTakenCpf(null);
-        notify("error", message);
+        setSaveError(message);
     }
 
     const { execute: createBeneficiary, isPending: isCreating } = useAction(createBeneficiaryAction, {
@@ -307,7 +297,7 @@ function BeneficiaryForm({
             onSaved(data.message ?? "Beneficiário adicionado com sucesso.");
         },
         onError: ({ error }) => {
-            notify("error", error.serverError ?? "Não foi possível adicionar o beneficiário.");
+            setSaveError(error.serverError ?? "Não foi possível adicionar o beneficiário.");
         },
     });
     const { execute: updateBeneficiary, isPending: isUpdating } = useAction(updateBeneficiaryAction, {
@@ -320,7 +310,7 @@ function BeneficiaryForm({
             onSaved(data.message ?? "Beneficiário atualizado com sucesso.");
         },
         onError: ({ error }) => {
-            notify("error", error.serverError ?? "Não foi possível editar o beneficiário.");
+            setSaveError(error.serverError ?? "Não foi possível editar o beneficiário.");
         },
     });
     const isPending = isCreating || isUpdating;
@@ -768,6 +758,17 @@ function BeneficiaryForm({
                     </DrawerClose>
                 </DrawerFooter>
             )}
+            <ResultDialog
+                status="warning"
+                open={saveError !== null}
+                onOpenChange={(nextOpen) => {
+                    if (!nextOpen) {
+                        setSaveError(null);
+                    }
+                }}
+                title="Não foi possível salvar"
+                subtitle={saveError ?? ""}
+            />
         </>
     );
 }

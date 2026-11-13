@@ -4,13 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useAction } from "next-safe-action/hooks";
-import animationCheck from "@/assets/animations/lottie/check.json" with { type: "json" };
 import { createMemberAction, deleteMemberAction, setMemberPasswordAction, updateMemberAction } from "@/app/(sistema)/membros/action";
 import { MemberDangerZoneDialog } from "@/app/(sistema)/membros/_components/member-danger-zone-dialog";
 import { MemberPasswordDialog } from "@/app/(sistema)/membros/_components/member-password-dialog";
 import { AdminPasswordDialog } from "@/components/shared/admin-password-dialog";
-import { SystemDialog } from "@/components/shared/system-dialog";
-import { notify } from "@/lib/notify";
+import { ResultDialog } from "@/components/shared/result-dialog";
 import { memberFormSchema, type MemberFormValues } from "@/app/(sistema)/membros/schema";
 import { Button } from "@/components/ui/button";
 import {
@@ -70,7 +68,6 @@ import {
 import SeparatorSection from "@/components/separator-section";
 import { HugeiconsIcon, IconSvgElement } from "@hugeicons/react";
 import { BirthdayCakeIcon, Call02Icon, IdCardIcon, Key01Icon, Location01Icon, Mail02Icon, PowerIcon, SquareLock01Icon, StarAward02Icon, UserCircleIcon, UserRemove01Icon, VenusAndMarsIcon } from "@hugeicons/core-free-icons";
-import { LordIcon } from "@lordicon/react";
 
 const takenFieldMessages = {
     "Este CPF já está em uso.": {
@@ -242,28 +239,13 @@ export function MemberDrawer({
                     handleDeleted();
                 }}
             />
-            <SystemDialog
-                mode="auto-close"
+            <ResultDialog
+                status="success"
                 open={successOpen}
                 onOpenChange={setSuccessOpen}
-                title={successKind === "set-password" ? "Senha alterada" : "Membro excluído"}
-                showCloseButton={false}
-                description={successKind === "set-password" ? "Senha alterada com sucesso." : "Membro excluído com sucesso."}
-            >
-                <div className="flex flex-col items-center justify-center">
-                    <LordIcon
-                        icon={animationCheck}
-                        trigger="in"
-                        className="size-24"
-                    />
-                    <h2 className="text-3xl font-bold mt-4">
-                        Deu certo!
-                    </h2>
-                </div>
-                <p className="text-muted-foreground text-center text-lg font-medium">
-                    {successKind === "set-password" ? "Senha alterada com sucesso." : "Membro excluído com sucesso."}
-                </p>
-            </SystemDialog>
+                title="Deu certo!"
+                subtitle={successKind === "set-password" ? "Senha alterada com sucesso." : "Membro excluído com sucesso."}
+            />
         </>
     );
 
@@ -333,13 +315,14 @@ function MemberForm({
     onUpdated: (message: string) => void;
 }) {
     const [takenField, setTakenField] = useState<"cpf" | "email" | null>(null);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     function showActionError(message: string) {
         const taken = takenFieldMessages[message as keyof typeof takenFieldMessages];
 
         if (!taken) {
             setTakenField(null);
-            notify("error", message);
+            setSaveError(message);
             return;
         }
 
@@ -356,7 +339,7 @@ function MemberForm({
             onCreated(data.data, data.message ?? "Membro adicionado com sucesso.");
         },
         onError: ({ error }) => {
-            notify("error", error.serverError ?? "Não foi possível adicionar o membro.");
+            setSaveError(error.serverError ?? "Não foi possível adicionar o membro.");
         },
     });
     const { execute: updateMember, isPending: isUpdating } = useAction(updateMemberAction, {
@@ -369,7 +352,7 @@ function MemberForm({
             onUpdated(data.message ?? "Membro atualizado com sucesso.");
         },
         onError: ({ error }) => {
-            notify("error", error.serverError ?? "Não foi possível editar o membro.");
+            setSaveError(error.serverError ?? "Não foi possível editar o membro.");
         },
     });
     const isPending = isCreating || isUpdating;
@@ -629,6 +612,17 @@ function MemberForm({
                     </DrawerClose>
                 </DrawerFooter>
             )}
+            <ResultDialog
+                status="warning"
+                open={saveError !== null}
+                onOpenChange={(nextOpen) => {
+                    if (!nextOpen) {
+                        setSaveError(null);
+                    }
+                }}
+                title="Não foi possível salvar"
+                subtitle={saveError ?? ""}
+            />
         </>
     );
 }

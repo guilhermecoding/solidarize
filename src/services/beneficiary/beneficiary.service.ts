@@ -356,7 +356,7 @@ export async function updateBeneficiary(
             return serverFailure(cpfTakenMessage(result.cpf));
         }
 
-        return serverSuccess(undefined, "Beneficiário atualizado com sucesso.");
+        return serverSuccess(undefined, "Beneficiário atualizado com sucesso!");
     } catch (error) {
         const taken = uniqueCpfFailure(error);
 
