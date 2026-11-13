@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft01Icon, ArrowRight01Icon } from "@hugeicons/core-free-icons";
+import { ArrowLeft01Icon, ArrowRight01Icon, UserSwitchIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import SeparatorSection from "@/components/separator-section";
@@ -46,19 +46,7 @@ export function AssistantLinker({
 
     return (
         <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="min-w-0 sm:flex-1">
-                    <SeparatorSection title="Assistentes" />
-                </div>
-                <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full shrink-0 sm:w-auto"
-                    onClick={onOpen}
-                >
-                    Vincular
-                </Button>
-            </div>
+            <SeparatorSection title="Assistentes" />
             {linked.length === 0 ? (
                 <p className="text-muted-foreground">Nenhum assistente vinculado</p>
             ) : (
@@ -70,6 +58,10 @@ export function AssistantLinker({
                     ))}
                 </div>
             )}
+            <Button type="button" variant="outline" onClick={onOpen}>
+                <HugeiconsIcon icon={UserSwitchIcon} strokeWidth={2} />
+                Vincular assistentes
+            </Button>
         </div>
     );
 }
@@ -227,7 +219,7 @@ function AssistantPickerSurface({
         <Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onCancel(); }} disablePointerDismissal>
             <DialogContent
                 overlayClassName="z-[60]"
-                className="z-[60] flex max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
+                className="z-60 flex max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg"
             >
                 <DialogHeader className="shrink-0 px-6 pt-6 pr-14">
                     <DialogTitle className="text-xl font-bold">{PICKER_TITLE}</DialogTitle>

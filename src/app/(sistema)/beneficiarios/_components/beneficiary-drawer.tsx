@@ -116,7 +116,7 @@ export function BeneficiaryDrawer({
         session: number;
         selectedIds: string[];
     } | null>(null);
-    const confirmAssistants = useRef<(ids: string[]) => void>(() => {});
+    const confirmAssistants = useRef<(ids: string[]) => void>(() => { });
     const assistantSession = useRef(0);
     const { executeAsync: removeBeneficiary } = useAction(deleteBeneficiaryAction);
     const title = beneficiary ? "Editar Beneficiário" : "Adicionar Beneficiário";
@@ -785,7 +785,7 @@ function BeneficiaryForm({
                             <Button
                                 type="button"
                                 variant="destructive"
-                                className="w-fit font-bold"
+                                className="w-full sm:w-fit font-bold"
                                 disabled={isPending}
                                 onClick={onRequestDelete}
                             >
