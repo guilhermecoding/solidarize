@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useAction } from "next-safe-action/hooks";
@@ -9,7 +9,7 @@ import {
     deleteBeneficiaryAction,
     updateBeneficiaryAction,
 } from "@/app/(sistema)/beneficiarios/action";
-import { AssistantLinker } from "@/app/(sistema)/beneficiarios/_components/assistant-linker";
+import { AssistantLinker, AssistantPicker } from "@/app/(sistema)/beneficiarios/_components/assistant-linker";
 import {
     beneficiaryFormSchema,
     emptyBeneficiaryFormValues,
@@ -111,6 +111,13 @@ export function BeneficiaryDrawer({
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [passwordOpen, setPasswordOpen] = useState(false);
     const [successOpen, setSuccessOpen] = useState(false);
+    const [assistantPicker, setAssistantPicker] = useState<{
+        open: boolean;
+        session: number;
+        selectedIds: string[];
+    } | null>(null);
+    const confirmAssistants = useRef<(ids: string[]) => void>(() => {});
+    const assistantSession = useRef(0);
     const { executeAsync: removeBeneficiary } = useAction(deleteBeneficiaryAction);
     const title = beneficiary ? "Editar Beneficiário" : "Adicionar Beneficiário";
     const description = beneficiary
@@ -121,6 +128,7 @@ export function BeneficiaryDrawer({
         if (!nextOpen) {
             setConfirmOpen(false);
             setPasswordOpen(false);
+            closeAssistantPicker();
         }
 
         onOpenChange(nextOpen);
@@ -142,6 +150,15 @@ export function BeneficiaryDrawer({
             assistants={assistants}
             surface={isMobile ? "drawer" : "dialog"}
             onRequestDelete={() => setConfirmOpen(true)}
+            onOpenAssistants={(selectedIds, confirm) => {
+                confirmAssistants.current = confirm;
+                assistantSession.current += 1;
+                setAssistantPicker({
+                    open: true,
+                    session: assistantSession.current,
+                    selectedIds,
+                });
+            }}
             onSaved={onSaved}
         />
     );
@@ -218,6 +235,25 @@ export function BeneficiaryDrawer({
         </>
     );
 
+    function closeAssistantPicker() {
+        setAssistantPicker((current) => current?.open ? { ...current, open: false } : current);
+    }
+
+    const assistantPickerDialog = (
+        <AssistantPicker
+            open={assistantPicker?.open ?? false}
+            session={assistantPicker?.session ?? 0}
+            mobile={isMobile}
+            assistants={assistants}
+            selectedIds={assistantPicker?.selectedIds ?? []}
+            onCancel={closeAssistantPicker}
+            onConfirm={(ids) => {
+                confirmAssistants.current(ids);
+                closeAssistantPicker();
+            }}
+        />
+    );
+
     if (isMobile) {
         return (
             <>
@@ -244,6 +280,7 @@ export function BeneficiaryDrawer({
                     </DrawerContent>
                 </Drawer>
                 {dialogs}
+                {assistantPickerDialog}
             </>
         );
     }
@@ -264,6 +301,7 @@ export function BeneficiaryDrawer({
                 </DialogContent>
             </Dialog>
             {dialogs}
+            {assistantPickerDialog}
         </>
     );
 }
@@ -273,12 +311,14 @@ function BeneficiaryForm({
     assistants,
     surface,
     onRequestDelete,
+    onOpenAssistants,
     onSaved,
 }: {
     beneficiary: BeneficiaryRecord | null;
     assistants: BeneficiaryAssistantRecord[];
     surface: "drawer" | "dialog";
     onRequestDelete: () => void;
+    onOpenAssistants: (selectedIds: string[], confirm: (ids: string[]) => void) => void;
     onSaved: (message: string) => void;
 }) {
     const [takenCpf, setTakenCpf] = useState<string | null>(null);
@@ -734,7 +774,7 @@ function BeneficiaryForm({
                             <AssistantLinker
                                 assistants={assistants}
                                 selectedIds={field.state.value}
-                                onChange={field.handleChange}
+                                onOpen={() => onOpenAssistants(field.state.value, field.handleChange)}
                             />
                         )}
                     </form.Field>
