@@ -50,6 +50,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { formatContact } from "@/lib/validate-contact";
@@ -148,6 +149,7 @@ export function BeneficiaryDrawer({
     const form = (
         <BeneficiaryForm
             key={beneficiary?.id ?? "new"}
+            open={open}
             beneficiary={beneficiary}
             assistants={assistants}
             surface={isMobile ? "drawer" : "dialog"}
@@ -308,7 +310,87 @@ export function BeneficiaryDrawer({
     );
 }
 
+type BeneficiaryFormTab = "info" | "family" | "assistants";
+
+function findErrorTabs(values: BeneficiaryFormValues, takenCpf: string | null) {
+    const parsed = beneficiaryFormSchema.safeParse(values);
+    let info = false;
+    let family = false;
+    let assistants = false;
+
+    if (!parsed.success) {
+        for (const issue of parsed.error.issues) {
+            const root = String(issue.path[0] ?? "");
+
+            if (root === "members") {
+                family = true;
+            } else if (root === "assistantIds") {
+                assistants = true;
+            } else {
+                info = true;
+            }
+        }
+    }
+
+    if (takenCpf) {
+        if (takenCpf === "*" || normalizeCpf(values.cpf) === takenCpf) {
+            info = true;
+        }
+
+        if (takenCpf === "*" || values.members.some((member) => normalizeCpf(member.cpf) === takenCpf)) {
+            family = true;
+        }
+    }
+
+    return { info, family, assistants };
+}
+
+function firstTabWithError(errors: {
+    info: boolean;
+    family: boolean;
+    assistants: boolean;
+}): BeneficiaryFormTab | null {
+    if (errors.info) {
+        return "info";
+    }
+
+    if (errors.family) {
+        return "family";
+    }
+
+    if (errors.assistants) {
+        return "assistants";
+    }
+
+    return null;
+}
+
+function BeneficiaryFormTabLabel({
+    label,
+    count,
+    hasError,
+}: {
+    label: string;
+    count?: number;
+    hasError: boolean;
+}) {
+    return (
+        <>
+            <span className="truncate">{label}</span>
+            {count !== undefined && count > 0 ? (
+                <span className="inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-foreground/10 px-1 text-[11px] leading-none font-medium tabular-nums">
+                    {count}
+                </span>
+            ) : null}
+            {hasError ? (
+                <span className="size-1.5 shrink-0 rounded-full bg-destructive" aria-hidden="true" />
+            ) : null}
+        </>
+    );
+}
+
 function BeneficiaryForm({
+    open,
     beneficiary,
     assistants,
     surface,
@@ -316,6 +398,7 @@ function BeneficiaryForm({
     onOpenAssistants,
     onSaved,
 }: {
+    open: boolean;
     beneficiary: BeneficiaryRecord | null;
     assistants: BeneficiaryAssistantRecord[];
     surface: "drawer" | "dialog";
@@ -323,12 +406,39 @@ function BeneficiaryForm({
     onOpenAssistants: (selectedIds: string[], confirm: (ids: string[]) => void) => void;
     onSaved: (message: string) => void;
 }) {
+    const formRef = useRef<HTMLFormElement>(null);
+    const [activeTab, setActiveTab] = useState<BeneficiaryFormTab>("info");
+    const [seenOpen, setSeenOpen] = useState(open);
     const [takenCpf, setTakenCpf] = useState<string | null>(null);
     const [saveError, setSaveError] = useState<string | null>(null);
 
+    if (open !== seenOpen) {
+        setSeenOpen(open);
+
+        if (open) {
+            setActiveTab("info");
+        }
+    }
+
+    function switchTab(nextTab: BeneficiaryFormTab) {
+        setActiveTab(nextTab);
+        formRef.current?.scrollTo({ top: 0 });
+    }
+
     function showActionError(message: string) {
         if (message.startsWith("Este CPF já está em uso.")) {
-            setTakenCpf(takenCpfDigits(message) ?? "*");
+            const nextTaken = takenCpfDigits(message) ?? "*";
+            setTakenCpf(nextTaken);
+            const errors = findErrorTabs(form.state.values, nextTaken);
+
+            if (!errors[activeTab]) {
+                const targetTab = firstTabWithError(errors);
+
+                if (targetTab) {
+                    switchTab(targetTab);
+                }
+            }
+
             return;
         }
 
@@ -380,354 +490,438 @@ function BeneficiaryForm({
     const submissionAttempts = useStore(form.store, (state) => state.submissionAttempts);
     const employment = useStore(form.store, (state) => state.values.employment);
     const members = useStore(form.store, (state) => state.values.members);
+    const assistantsCount = useStore(form.store, (state) => state.values.assistantIds.length);
+    const tabErrorKey = useStore(form.store, (state) => {
+        if (state.submissionAttempts === 0 && takenCpf === null) {
+            return "000";
+        }
+
+        const errors = findErrorTabs(state.values, takenCpf);
+
+        return `${errors.info ? 1 : 0}${errors.family ? 1 : 0}${errors.assistants ? 1 : 0}`;
+    });
+    const tabErrors = {
+        info: tabErrorKey[0] === "1",
+        family: tabErrorKey[1] === "1",
+        assistants: tabErrorKey[2] === "1",
+    };
+
+    function handleSubmit() {
+        const errors = findErrorTabs(form.state.values, takenCpf);
+        void form.handleSubmit();
+
+        if (!errors[activeTab]) {
+            const targetTab = firstTabWithError(errors);
+
+            if (targetTab) {
+                switchTab(targetTab);
+            }
+        }
+    }
 
     return (
         <>
-            <form
-                id="beneficiary-form"
-                className={surface === "dialog" ? "min-h-0 flex-1 overflow-y-auto px-6 py-4" : "min-h-0 flex-1 overflow-y-auto px-4 py-4"}
-                noValidate
-                onSubmit={(event) => {
-                    event.preventDefault();
-                    form.handleSubmit();
+            <Tabs
+                value={activeTab}
+                onValueChange={(value) => {
+                    if (value === "info" || value === "family" || value === "assistants") {
+                        switchTab(value);
+                    }
                 }}
+                className="flex min-h-0 flex-1 flex-col gap-0"
             >
-                <FieldGroup>
-                    <SeparatorSection title="Titular" />
-                    <form.Field name="name">
-                        {(field) => (
-                            <TextField
-                                field={field}
-                                label="Nome Completo"
-                                autoComplete="name"
-                                placeholder="Ex: João da Silva"
-                                attempts={submissionAttempts}
-                                icon={UserCircleIcon}
-                                required
+                <div
+                    className={
+                        surface === "dialog"
+                            ? "shrink-0 border-b px-6 pt-4 pb-3"
+                            : "shrink-0 border-b px-4 pt-3 pb-3"
+                    }
+                >
+                    <TabsList className="grid h-10! w-full grid-cols-3 rounded-2xl p-1 sm:inline-flex sm:w-fit">
+                        <TabsTrigger
+                            value="info"
+                            className="min-w-0 cursor-pointer gap-1.5 rounded-xl px-2 text-xs sm:flex-initial sm:px-4 sm:text-sm"
+                        >
+                            <BeneficiaryFormTabLabel label="Informações" hasError={tabErrors.info} />
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="family"
+                            className="min-w-0 cursor-pointer gap-1.5 rounded-xl px-2 text-xs sm:flex-initial sm:px-4 sm:text-sm"
+                        >
+                            <BeneficiaryFormTabLabel
+                                label="Família"
+                                count={members.length}
+                                hasError={tabErrors.family}
                             />
-                        )}
-                    </form.Field>
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <form.Field name="cpf">
-                            {(field) => (
-                                <TextField
-                                    field={field}
-                                    label="CPF"
-                                    inputMode="numeric"
-                                    autoComplete="off"
-                                    placeholder="000.000.000-00"
-                                    attempts={submissionAttempts}
-                                    format={formatCpf}
-                                    icon={IdCardIcon}
-                                    serverError={cpfFieldError(field.state.value, takenCpf)}
-                                    onEdit={() => setTakenCpf((current) => current === normalizeCpf(field.state.value) || current === "*" ? null : current)}
-                                />
-                            )}
-                        </form.Field>
-                        <form.Field name="email">
-                            {(field) => (
-                                <TextField
-                                    field={field}
-                                    label="E-mail"
-                                    type="email"
-                                    inputMode="email"
-                                    autoComplete="email"
-                                    placeholder="exemplo@email.com"
-                                    attempts={submissionAttempts}
-                                    icon={Mail02Icon}
-                                />
-                            )}
-                        </form.Field>
-                    </div>
-                    <form.Field name="contacts" mode="array">
-                        {(field) => (
-                            <div className="flex flex-col gap-3">
-                                <div className="flex items-center justify-between gap-3">
-                                    <FieldLabel required>Contatos</FieldLabel>
-                                    <Button type="button" variant="outline" size="sm" onClick={() => field.pushValue("")}>
-                                        <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
-                                        Adicionar contato
-                                    </Button>
-                                </div>
-                                {field.state.value.map((_, index) => (
-                                    <form.Field key={index} name={`contacts[${index}]`}>
-                                        {(contactField) => (
-                                            <div className="flex items-start gap-2">
-                                                <div className="min-w-0 flex-1">
-                                                    <TextField
-                                                        field={contactField}
-                                                        label={`Contato ${index + 1}`}
-                                                        inputMode="tel"
-                                                        autoComplete="tel"
-                                                        placeholder="(00) 00000-0000"
-                                                        attempts={submissionAttempts}
-                                                        format={formatContact}
-                                                        icon={Call02Icon}
-                                                        required
-                                                    />
-                                                </div>
-                                                {field.state.value.length > 1 ? (
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="mt-8 text-muted-foreground"
-                                                        aria-label={`Remover contato ${index + 1}`}
-                                                        onClick={() => field.removeValue(index)}
-                                                    >
-                                                        <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-                                                    </Button>
-                                                ) : null}
-                                            </div>
-                                        )}
-                                    </form.Field>
-                                ))}
-                                <ArrayFieldError field={field} attempts={submissionAttempts} />
-                            </div>
-                        )}
-                    </form.Field>
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                        <form.Field name="dateOfBirth">
-                            {(field) => (
-                                <TextField
-                                    field={field}
-                                    label="Data de Nascimento"
-                                    inputMode="numeric"
-                                    autoComplete="bday"
-                                    placeholder="DD/MM/AAAA"
-                                    attempts={submissionAttempts}
-                                    format={formatDateOfBirthInput}
-                                    icon={BirthdayCakeIcon}
-                                    required
-                                />
-                            )}
-                        </form.Field>
-                        <form.Field name="gender">
-                            {(field) => (
-                                <ChoiceField
-                                    field={field}
-                                    label="Gênero"
-                                    attempts={submissionAttempts}
-                                    placeholder="Selecione"
-                                    required
-                                    options={beneficiaryGenders.map((gender) => ({
-                                        value: gender,
-                                        label: beneficiaryGenderLabels[gender],
-                                    }))}
-                                    onChange={(value) => field.handleChange(value ?? "")}
-                                    icon={VenusAndMarsIcon}
-                                />
-                            )}
-                        </form.Field>
-                        <form.Field name="maritalStatus">
-                            {(field) => (
-                                <ChoiceField
-                                    field={field}
-                                    label="Estado Civil"
-                                    attempts={submissionAttempts}
-                                    placeholder="Selecione"
-                                    required
-                                    options={maritalStatuses.map((status) => ({
-                                        value: status,
-                                        label: maritalStatusLabels[status],
-                                    }))}
-                                    onChange={(value) => field.handleChange(value ?? "")}
-                                />
-                            )}
-                        </form.Field>
-                    </div>
-                    <SeparatorSection title="Endereço" />
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <form.Field name="street">
-                            {(field) => (
-                                <TextField
-                                    field={field}
-                                    label="Rua"
-                                    autoComplete="street-address"
-                                    placeholder="Ex: Rua das Flores, 123"
-                                    attempts={submissionAttempts}
-                                    icon={Location01Icon}
-                                    required
-                                />
-                            )}
-                        </form.Field>
-                        <form.Field name="neighborhood">
-                            {(field) => (
-                                <TextField
-                                    field={field}
-                                    label="Bairro"
-                                    placeholder="Ex: Centro"
-                                    attempts={submissionAttempts}
-                                    required
-                                />
-                            )}
-                        </form.Field>
-                        <form.Field name="city">
-                            {(field) => (
-                                <TextField
-                                    field={field}
-                                    label="Cidade"
-                                    placeholder="Ex: São Paulo"
-                                    attempts={submissionAttempts}
-                                    required
-                                />
-                            )}
-                        </form.Field>
-                        <form.Field name="state">
-                            {(field) => (
-                                <ChoiceField
-                                    field={field}
-                                    label="UF"
-                                    attempts={submissionAttempts}
-                                    placeholder="Selecione"
-                                    required
-                                    options={brazilianStates.map((state) => ({
-                                        value: state,
-                                        label: state,
-                                    }))}
-                                    onChange={(value) => field.handleChange(value ?? "")}
-                                />
-                            )}
-                        </form.Field>
-                    </div>
-                    <SeparatorSection title="Trabalho e assistência" />
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <form.Field name="employment">
-                            {(field) => (
-                                <ChoiceField
-                                    field={field}
-                                    label="Trabalho"
-                                    attempts={submissionAttempts}
-                                    placeholder="Selecione"
-                                    required
-                                    options={employments.map((item) => ({
-                                        value: item,
-                                        label: employmentLabels[item],
-                                    }))}
-                                    onChange={(value) => {
-                                        const next = value ?? "";
-                                        field.handleChange(next);
-
-                                        if (next !== "employed") {
-                                            form.setFieldValue("profession", "");
-                                        }
-                                    }}
-                                />
-                            )}
-                        </form.Field>
-                        {employment === "employed" ? (
-                            <form.Field name="profession">
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="assistants"
+                            className="min-w-0 cursor-pointer gap-1.5 rounded-xl px-2 text-xs sm:flex-initial sm:px-4 sm:text-sm"
+                        >
+                            <BeneficiaryFormTabLabel
+                                label="Assistentes"
+                                count={assistantsCount}
+                                hasError={tabErrors.assistants}
+                            />
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
+                <form
+                    ref={formRef}
+                    id="beneficiary-form"
+                    className={
+                        surface === "dialog"
+                            ? "min-h-0 flex-1 overflow-y-auto px-6 py-4"
+                            : "min-h-0 flex-1 overflow-y-auto px-4 py-4"
+                    }
+                    noValidate
+                    onSubmit={(event) => {
+                        event.preventDefault();
+                        handleSubmit();
+                    }}
+                >
+                    <TabsContent value="info" keepMounted>
+                        <FieldGroup>
+                            <SeparatorSection title="Titular" />
+                            <form.Field name="name">
                                 {(field) => (
                                     <TextField
                                         field={field}
-                                        label="Profissão"
-                                        placeholder="Ex: Costureira"
+                                        label="Nome Completo"
+                                        autoComplete="name"
+                                        placeholder="Ex: João da Silva"
                                         attempts={submissionAttempts}
+                                        icon={UserCircleIcon}
                                         required
                                     />
                                 )}
                             </form.Field>
-                        ) : null}
-                        <form.Field name="status">
-                            {(field) => (
-                                <ChoiceField
-                                    field={field}
-                                    label="Situação"
-                                    attempts={submissionAttempts}
-                                    placeholder="Selecione"
-                                    required
-                                    options={beneficiaryStatuses.map((status) => ({
-                                        value: status,
-                                        label: beneficiaryStatusLabels[status],
-                                    }))}
-                                    onChange={(value) => field.handleChange(value ?? "")}
-                                />
-                            )}
-                        </form.Field>
-                        <form.Field name="aidType">
-                            {(field) => (
-                                <ChoiceField
-                                    field={field}
-                                    label="Tipo de Auxílio"
-                                    attempts={submissionAttempts}
-                                    placeholder="Selecione"
-                                    required
-                                    options={aidTypes.map((aidType) => ({
-                                        value: aidType,
-                                        label: aidTypeLabels[aidType],
-                                    }))}
-                                    onChange={(value) => field.handleChange(value ?? "")}
-                                />
-                            )}
-                        </form.Field>
-                    </div>
-                    <form.Field name="notes">
-                        {(field) => (
-                            <NotesField field={field} attempts={submissionAttempts} />
-                        )}
-                    </form.Field>
-
-                    <SeparatorSection title="Membros da Família" />
-                    <form.Field name="members" mode="array">
-                        {(field) => (
-                            <div className="flex flex-col gap-4">
-                                {field.state.value.length === 0 ? (
-                                    <p className="text-muted-foreground">Nenhum membro familiar cadastrado</p>
-                                ) : null}
-                                {field.state.value.map((member, index) => (
-                                    <FamilyMemberCard
-                                        key={member.id || index}
-                                        form={form}
-                                        index={index}
-                                        member={members[index] ?? member}
-                                        attempts={submissionAttempts}
-                                        takenCpf={takenCpf}
-                                        onEditCpf={(value) => {
-                                            setTakenCpf((cpf) => cpf === normalizeCpf(value) || cpf === "*" ? null : cpf);
-                                        }}
-                                        onRemove={() => field.removeValue(index)}
-                                        membersField={field}
-                                    />
-                                ))}
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => field.pushValue(createEmptyFamilyMember())}
-                                >
-                                    <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
-                                    Adicionar familiar
-                                </Button>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <form.Field name="cpf">
+                                    {(field) => (
+                                        <TextField
+                                            field={field}
+                                            label="CPF"
+                                            inputMode="numeric"
+                                            autoComplete="off"
+                                            placeholder="000.000.000-00"
+                                            attempts={submissionAttempts}
+                                            format={formatCpf}
+                                            icon={IdCardIcon}
+                                            serverError={cpfFieldError(field.state.value, takenCpf)}
+                                            onEdit={() => setTakenCpf((current) => current === normalizeCpf(field.state.value) || current === "*" ? null : current)}
+                                        />
+                                    )}
+                                </form.Field>
+                                <form.Field name="email">
+                                    {(field) => (
+                                        <TextField
+                                            field={field}
+                                            label="E-mail"
+                                            type="email"
+                                            inputMode="email"
+                                            autoComplete="email"
+                                            placeholder="exemplo@email.com"
+                                            attempts={submissionAttempts}
+                                            icon={Mail02Icon}
+                                        />
+                                    )}
+                                </form.Field>
                             </div>
-                        )}
-                    </form.Field>
+                            <form.Field name="contacts" mode="array">
+                                {(field) => (
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <FieldLabel required>Contatos</FieldLabel>
+                                            <Button type="button" variant="outline" size="sm" onClick={() => field.pushValue("")}>
+                                                <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+                                                Adicionar contato
+                                            </Button>
+                                        </div>
+                                        {field.state.value.map((_, index) => (
+                                            <form.Field key={index} name={`contacts[${index}]`}>
+                                                {(contactField) => (
+                                                    <div className="flex items-start gap-2">
+                                                        <div className="min-w-0 flex-1">
+                                                            <TextField
+                                                                field={contactField}
+                                                                label={`Contato ${index + 1}`}
+                                                                inputMode="tel"
+                                                                autoComplete="tel"
+                                                                placeholder="(00) 00000-0000"
+                                                                attempts={submissionAttempts}
+                                                                format={formatContact}
+                                                                icon={Call02Icon}
+                                                                required
+                                                            />
+                                                        </div>
+                                                        {field.state.value.length > 1 ? (
+                                                            <Button
+                                                                type="button"
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="mt-8 text-muted-foreground"
+                                                                aria-label={`Remover contato ${index + 1}`}
+                                                                onClick={() => field.removeValue(index)}
+                                                            >
+                                                                <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
+                                                            </Button>
+                                                        ) : null}
+                                                    </div>
+                                                )}
+                                            </form.Field>
+                                        ))}
+                                        <ArrayFieldError field={field} attempts={submissionAttempts} />
+                                    </div>
+                                )}
+                            </form.Field>
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                                <form.Field name="dateOfBirth">
+                                    {(field) => (
+                                        <TextField
+                                            field={field}
+                                            label="Data de Nascimento"
+                                            inputMode="numeric"
+                                            autoComplete="bday"
+                                            placeholder="DD/MM/AAAA"
+                                            attempts={submissionAttempts}
+                                            format={formatDateOfBirthInput}
+                                            icon={BirthdayCakeIcon}
+                                            required
+                                        />
+                                    )}
+                                </form.Field>
+                                <form.Field name="gender">
+                                    {(field) => (
+                                        <ChoiceField
+                                            field={field}
+                                            label="Gênero"
+                                            attempts={submissionAttempts}
+                                            placeholder="Selecione"
+                                            required
+                                            options={beneficiaryGenders.map((gender) => ({
+                                                value: gender,
+                                                label: beneficiaryGenderLabels[gender],
+                                            }))}
+                                            onChange={(value) => field.handleChange(value ?? "")}
+                                            icon={VenusAndMarsIcon}
+                                        />
+                                    )}
+                                </form.Field>
+                                <form.Field name="maritalStatus">
+                                    {(field) => (
+                                        <ChoiceField
+                                            field={field}
+                                            label="Estado Civil"
+                                            attempts={submissionAttempts}
+                                            placeholder="Selecione"
+                                            required
+                                            options={maritalStatuses.map((status) => ({
+                                                value: status,
+                                                label: maritalStatusLabels[status],
+                                            }))}
+                                            onChange={(value) => field.handleChange(value ?? "")}
+                                        />
+                                    )}
+                                </form.Field>
+                            </div>
+                            <SeparatorSection title="Endereço" />
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <form.Field name="street">
+                                    {(field) => (
+                                        <TextField
+                                            field={field}
+                                            label="Rua"
+                                            autoComplete="street-address"
+                                            placeholder="Ex: Rua das Flores, 123"
+                                            attempts={submissionAttempts}
+                                            icon={Location01Icon}
+                                            required
+                                        />
+                                    )}
+                                </form.Field>
+                                <form.Field name="neighborhood">
+                                    {(field) => (
+                                        <TextField
+                                            field={field}
+                                            label="Bairro"
+                                            placeholder="Ex: Centro"
+                                            attempts={submissionAttempts}
+                                            required
+                                        />
+                                    )}
+                                </form.Field>
+                                <form.Field name="city">
+                                    {(field) => (
+                                        <TextField
+                                            field={field}
+                                            label="Cidade"
+                                            placeholder="Ex: São Paulo"
+                                            attempts={submissionAttempts}
+                                            required
+                                        />
+                                    )}
+                                </form.Field>
+                                <form.Field name="state">
+                                    {(field) => (
+                                        <ChoiceField
+                                            field={field}
+                                            label="UF"
+                                            attempts={submissionAttempts}
+                                            placeholder="Selecione"
+                                            required
+                                            options={brazilianStates.map((state) => ({
+                                                value: state,
+                                                label: state,
+                                            }))}
+                                            onChange={(value) => field.handleChange(value ?? "")}
+                                        />
+                                    )}
+                                </form.Field>
+                            </div>
+                            <SeparatorSection title="Trabalho e assistência" />
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <form.Field name="employment">
+                                    {(field) => (
+                                        <ChoiceField
+                                            field={field}
+                                            label="Trabalho"
+                                            attempts={submissionAttempts}
+                                            placeholder="Selecione"
+                                            required
+                                            options={employments.map((item) => ({
+                                                value: item,
+                                                label: employmentLabels[item],
+                                            }))}
+                                            onChange={(value) => {
+                                                const next = value ?? "";
+                                                field.handleChange(next);
 
-                    <form.Field name="assistantIds">
-                        {(field) => (
-                            <AssistantLinker
-                                assistants={assistants}
-                                selectedIds={field.state.value}
-                                onOpen={() => onOpenAssistants(field.state.value, field.handleChange)}
-                            />
-                        )}
-                    </form.Field>
-
-                    {beneficiary ? (
-                        <>
-                            <SeparatorSection title="Zona de Perigo" />
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                className="w-full sm:w-fit font-bold"
-                                disabled={isPending}
-                                onClick={onRequestDelete}
-                            >
-                                <HugeiconsIcon icon={UserRemove01Icon} strokeWidth={2.5} className="size-5" />
-                                Excluir Beneficiário
-                            </Button>
-                        </>
-                    ) : null}
-                </FieldGroup>
-            </form>
+                                                if (next !== "employed") {
+                                                    form.setFieldValue("profession", "");
+                                                }
+                                            }}
+                                        />
+                                    )}
+                                </form.Field>
+                                {employment === "employed" ? (
+                                    <form.Field name="profession">
+                                        {(field) => (
+                                            <TextField
+                                                field={field}
+                                                label="Profissão"
+                                                placeholder="Ex: Costureira"
+                                                attempts={submissionAttempts}
+                                                required
+                                            />
+                                        )}
+                                    </form.Field>
+                                ) : null}
+                                <form.Field name="status">
+                                    {(field) => (
+                                        <ChoiceField
+                                            field={field}
+                                            label="Situação"
+                                            attempts={submissionAttempts}
+                                            placeholder="Selecione"
+                                            required
+                                            options={beneficiaryStatuses.map((status) => ({
+                                                value: status,
+                                                label: beneficiaryStatusLabels[status],
+                                            }))}
+                                            onChange={(value) => field.handleChange(value ?? "")}
+                                        />
+                                    )}
+                                </form.Field>
+                                <form.Field name="aidType">
+                                    {(field) => (
+                                        <ChoiceField
+                                            field={field}
+                                            label="Tipo de Auxílio"
+                                            attempts={submissionAttempts}
+                                            placeholder="Selecione"
+                                            required
+                                            options={aidTypes.map((aidType) => ({
+                                                value: aidType,
+                                                label: aidTypeLabels[aidType],
+                                            }))}
+                                            onChange={(value) => field.handleChange(value ?? "")}
+                                        />
+                                    )}
+                                </form.Field>
+                            </div>
+                            <form.Field name="notes">
+                                {(field) => (
+                                    <NotesField field={field} attempts={submissionAttempts} />
+                                )}
+                            </form.Field>
+                            {beneficiary ? (
+                                <>
+                                    <SeparatorSection title="Zona de Perigo" />
+                                    <Button
+                                        type="button"
+                                        variant="destructive"
+                                        className="w-full font-bold sm:w-fit"
+                                        disabled={isPending}
+                                        onClick={onRequestDelete}
+                                    >
+                                        <HugeiconsIcon icon={UserRemove01Icon} strokeWidth={2.5} className="size-5" />
+                                        Excluir Beneficiário
+                                    </Button>
+                                </>
+                            ) : null}
+                        </FieldGroup>
+                    </TabsContent>
+                    <TabsContent value="family" keepMounted>
+                        <div className="flex flex-col gap-4">
+                            <SeparatorSection title="Membros da Família" />
+                            <form.Field name="members" mode="array">
+                                {(field) => (
+                                    <div className="flex flex-col gap-4">
+                                        {field.state.value.length === 0 ? (
+                                            <p className="text-muted-foreground">Nenhum membro familiar cadastrado</p>
+                                        ) : null}
+                                        {field.state.value.map((member, index) => (
+                                            <FamilyMemberCard
+                                                key={member.id || index}
+                                                form={form}
+                                                index={index}
+                                                member={members[index] ?? member}
+                                                attempts={submissionAttempts}
+                                                takenCpf={takenCpf}
+                                                onEditCpf={(value) => {
+                                                    setTakenCpf((cpf) => cpf === normalizeCpf(value) || cpf === "*" ? null : cpf);
+                                                }}
+                                                onRemove={() => field.removeValue(index)}
+                                                membersField={field}
+                                            />
+                                        ))}
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => field.pushValue(createEmptyFamilyMember())}
+                                        >
+                                            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
+                                            Adicionar familiar
+                                        </Button>
+                                    </div>
+                                )}
+                            </form.Field>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="assistants" keepMounted>
+                        <form.Field name="assistantIds">
+                            {(field) => (
+                                <AssistantLinker
+                                    assistants={assistants}
+                                    selectedIds={field.state.value}
+                                    onOpen={() => onOpenAssistants(field.state.value, field.handleChange)}
+                                />
+                            )}
+                        </form.Field>
+                    </TabsContent>
+                </form>
+            </Tabs>
             {surface === "dialog" ? (
                 <DialogFooter className="shrink-0 border-t px-6 py-4 sm:justify-end">
                     <DialogClose render={<Button type="button" variant="outline" disabled={isPending} />}>
@@ -738,7 +932,7 @@ function BeneficiaryForm({
                     </Button>
                 </DialogFooter>
             ) : (
-                <DrawerFooter>
+                <DrawerFooter className="border-t pt-3">
                     <Button type="submit" form="beneficiary-form" loading={isPending} loadingText="Salvando">
                         Salvar
                     </Button>
