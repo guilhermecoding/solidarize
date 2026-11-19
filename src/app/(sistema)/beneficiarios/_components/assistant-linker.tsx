@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft01Icon, ArrowRight01Icon, UserSwitchIcon } from "@hugeicons/core-free-icons";
+import {
+    ArrowLeft01Icon,
+    ArrowRight01Icon,
+    Search01Icon,
+    SearchAlertIcon,
+    UserSwitchIcon,
+} from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import SeparatorSection from "@/components/separator-section";
@@ -23,6 +29,7 @@ import {
     DrawerHeader,
     DrawerTitle,
 } from "@/components/ui/drawer";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { BeneficiaryAssistantRecord } from "@/services/beneficiary/beneficiary.type";
 
@@ -85,13 +92,16 @@ export function AssistantPicker({
 }) {
     const [seenSession, setSeenSession] = useState(session);
     const [draftIds, setDraftIds] = useState(selectedIds);
+    const [query, setQuery] = useState("");
     const [page, setPage] = useState(1);
 
     if (session !== seenSession) {
         setSeenSession(session);
         setDraftIds(selectedIds);
+        setQuery("");
         setPage(1);
     }
+
     const pinned = new Set(selectedIds);
     const draft = new Set(draftIds);
     const listed = assistants.toSorted((left, right) => {
@@ -104,6 +114,12 @@ export function AssistantPicker({
 
         return left.name.localeCompare(right.name, "pt-BR");
     });
+    const filtered = filterAssistants(listed, query);
+
+    function handleQueryChange(nextQuery: string) {
+        setQuery(nextQuery);
+        setPage(1);
+    }
 
     function toggle(id: string, checked: boolean) {
         setDraftIds((current) => {
@@ -119,8 +135,10 @@ export function AssistantPicker({
         <AssistantPickerSurface
             open={open}
             mobile={mobile}
-            assistants={listed}
+            assistants={filtered}
             selected={draft}
+            query={query}
+            onQueryChange={handleQueryChange}
             page={page}
             onPageChange={setPage}
             onToggle={toggle}
@@ -135,6 +153,8 @@ function AssistantPickerSurface({
     mobile,
     assistants,
     selected,
+    query,
+    onQueryChange,
     page,
     onPageChange,
     onToggle,
@@ -145,6 +165,8 @@ function AssistantPickerSurface({
     mobile: boolean;
     assistants: BeneficiaryAssistantRecord[];
     selected: Set<string>;
+    query: string;
+    onQueryChange: (query: string) => void;
     page: number;
     onPageChange: (page: number) => void;
     onToggle: (id: string, checked: boolean) => void;
@@ -155,7 +177,20 @@ function AssistantPickerSurface({
     const currentPage = Math.min(page, pageCount);
     const pageAssistants = assistants.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
     const showPager = assistants.length > PAGE_SIZE;
+    const hasQuery = query.trim().length > 0;
     const inset = mobile ? "px-4" : "px-6";
+    const search = (
+        <div className={cn("shrink-0 pt-4", inset)}>
+            <Input
+                value={query}
+                onValueChange={onQueryChange}
+                placeholder="Buscar por nome"
+                aria-label="Buscar assistentes"
+                maxLength={120}
+                startIcon={<HugeiconsIcon icon={Search01Icon} strokeWidth={2} />}
+            />
+        </div>
+    );
     const list = (
         <AssistantList
             assistants={pageAssistants}
@@ -163,6 +198,7 @@ function AssistantPickerSurface({
             inset={inset}
             onToggle={onToggle}
             empty={assistants.length === 0}
+            hasQuery={hasQuery}
         />
     );
     const pager = showPager ? (
@@ -200,6 +236,7 @@ function AssistantPickerSurface({
                         <DrawerTitle className="text-xl font-bold">{PICKER_TITLE}</DrawerTitle>
                         <DrawerDescription>{PICKER_DESCRIPTION}</DrawerDescription>
                     </DrawerHeader>
+                    {search}
                     {list}
                     {pager}
                     <DrawerFooter>
@@ -225,6 +262,7 @@ function AssistantPickerSurface({
                     <DialogTitle className="text-xl font-bold">{PICKER_TITLE}</DialogTitle>
                     <DialogDescription>{PICKER_DESCRIPTION}</DialogDescription>
                 </DialogHeader>
+                {search}
                 {list}
                 {pager}
                 <DialogFooter className="shrink-0 border-t px-6 py-4 sm:justify-end">
@@ -246,14 +284,25 @@ function AssistantList({
     onToggle,
     inset,
     empty,
+    hasQuery,
 }: {
     assistants: BeneficiaryAssistantRecord[];
     selected: Set<string>;
     onToggle: (id: string, checked: boolean) => void;
     inset: string;
     empty: boolean;
+    hasQuery: boolean;
 }) {
     if (empty) {
+        if (hasQuery) {
+            return (
+                <div className={cn("flex flex-col items-center gap-3 py-8 text-center text-muted-foreground", inset)}>
+                    <HugeiconsIcon icon={SearchAlertIcon} strokeWidth={2} className="size-8" />
+                    <span className="text-sm font-medium">Nenhum assistente encontrado</span>
+                </div>
+            );
+        }
+
         return <p className={cn("py-4 text-muted-foreground", inset)}>Nenhum membro do sistema.</p>;
     }
 
@@ -273,4 +322,28 @@ function AssistantList({
             ))}
         </div>
     );
+}
+
+function filterAssistants(
+    assistants: BeneficiaryAssistantRecord[],
+    query: string,
+): BeneficiaryAssistantRecord[] {
+    const words = normalizeSearchText(query).trim().split(/\s+/).filter(Boolean);
+
+    if (words.length === 0) {
+        return assistants;
+    }
+
+    return assistants.filter((assistant) => {
+        const name = normalizeSearchText(assistant.name);
+
+        return words.every((word) => name.includes(word));
+    });
+}
+
+function normalizeSearchText(value: string): string {
+    return value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
 }
