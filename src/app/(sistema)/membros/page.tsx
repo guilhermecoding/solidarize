@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export default function MemberPage() {
     return (
-        <Page>
+        <Page showBack>
             <Section className="flex flex-col gap-6">
                 <TitlePage
                     title="Membros"

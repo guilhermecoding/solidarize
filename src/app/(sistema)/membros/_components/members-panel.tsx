@@ -8,6 +8,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { searchMembersAction } from "@/app/(sistema)/membros/action";
 import { MemberCredentialsDialog } from "@/app/(sistema)/membros/_components/member-credentials-dialog";
 import { MemberDrawer } from "@/app/(sistema)/membros/_components/member-drawer";
+import { ResultDialog } from "@/components/shared/result-dialog";
 import { notify } from "@/lib/notify";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,7 @@ export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId
     const [editing, setEditing] = useState<Member | null>(null);
     const [credentials, setCredentials] = useState<CredentialsDialogState | null>(null);
     const [credentialsOpen, setCredentialsOpen] = useState(false);
+    const [updatedMessage, setUpdatedMessage] = useState<string | null>(null);
     const requestId = useRef(0);
     const trimmedQuery = query.trim().replace(/\s+/g, " ");
 
@@ -122,7 +124,7 @@ export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId
 
     function handleUpdated(message: string) {
         setDrawerOpen(false);
-        notify("success", message);
+        setUpdatedMessage(message);
         router.refresh();
     }
 
@@ -259,6 +261,17 @@ export function MembersPanel({ members, canWrite: initialCanWrite, currentUserId
                 onOpenChange={handleDrawerOpenChange}
                 onCreated={handleCreated}
                 onUpdated={handleUpdated}
+            />
+            <ResultDialog
+                status="success"
+                open={updatedMessage !== null}
+                onOpenChange={(nextOpen) => {
+                    if (!nextOpen) {
+                        setUpdatedMessage(null);
+                    }
+                }}
+                title="Membro atualizado"
+                subtitle={updatedMessage ?? ""}
             />
             <MemberCredentialsDialog
                 open={credentialsOpen}

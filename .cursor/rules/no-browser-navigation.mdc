@@ -1,0 +1,12 @@
+---
+description: Não abrir o site no navegador nem navegar pela aplicação
+alwaysApply: true
+---
+
+# Não navegar no site
+
+Não abra este site em um navegador e não navegue por ele.
+
+Isso inclui o app local ou publicado: não faça login, não clique, não preencha formulários e não percorra rotas. Não use automação de navegador (Chrome, agent-browser, Playwright, DevTools ou MCP de browser) para abrir ou percorrer a interface.
+
+Confira o trabalho pelo código, pelos tipos e pelo lint. Se a verificação visual depender de navegar no site, descreva o que não foi conferido na tela.

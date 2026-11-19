@@ -49,12 +49,6 @@
       "skillPath": "skills/next-cache-components-optimizer/SKILL.md",
       "computedHash": "c62f6c13119c4e9027268edaa07291c33d74a676e1bd93583349c07efd990f6b"
     },
-    "next-dev-loop": {
-      "source": "vercel/next.js",
-      "sourceType": "github",
-      "skillPath": "skills/next-dev-loop/SKILL.md",
-      "computedHash": "c305c83b726212e0284930c65cded2c4a4ab85f9bfccfa83b62274247fe3580e"
-    },
     "next-partial-prefetching-adoption": {
       "source": "vercel/next.js",
       "sourceType": "github",

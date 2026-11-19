@@ -7,6 +7,9 @@ export type UserAccess = (typeof userAccesses)[number];
 export const userPermissions = ["read", "full"] as const;
 export type UserPermission = (typeof userPermissions)[number];
 
+export const userGenders = ["female", "male", "transgender", "other", "unspecified"] as const;
+export type UserGender = (typeof userGenders)[number];
+
 export const userRoleLabels: Record<UserRole, string> = {
     admin: "Administrador",
     member: "Membro",
@@ -20,6 +23,14 @@ export const userAccessLabels: Record<UserAccess, string> = {
 export const userPermissionLabels: Record<UserPermission, string> = {
     read: "Leitura",
     full: "Total",
+};
+
+export const userGenderLabels: Record<UserGender, string> = {
+    female: "Feminino",
+    male: "Masculino",
+    transgender: "Transgênero",
+    other: "Outro",
+    unspecified: "Não Definido",
 };
 
 export type MemberActor = {
@@ -36,6 +47,7 @@ export type Member = {
     contact: string;
     address: string;
     dateOfBirth: string;
+    gender: UserGender;
     role: UserRole;
     access: UserAccess;
     permission: UserPermission;
@@ -48,6 +60,7 @@ export type MemberInput = {
     contact: string;
     address: string;
     dateOfBirth: string;
+    gender: UserGender;
     role: UserRole;
     access: UserAccess;
     permission: UserPermission;

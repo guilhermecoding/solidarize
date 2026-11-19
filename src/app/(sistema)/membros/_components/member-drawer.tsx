@@ -4,13 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useAction } from "next-safe-action/hooks";
-import animationCheck from "@/assets/animations/lottie/check.json" with { type: "json" };
 import { createMemberAction, deleteMemberAction, setMemberPasswordAction, updateMemberAction } from "@/app/(sistema)/membros/action";
 import { MemberDangerZoneDialog } from "@/app/(sistema)/membros/_components/member-danger-zone-dialog";
 import { MemberPasswordDialog } from "@/app/(sistema)/membros/_components/member-password-dialog";
 import { AdminPasswordDialog } from "@/components/shared/admin-password-dialog";
-import { SystemDialog } from "@/components/shared/system-dialog";
-import { notify } from "@/lib/notify";
+import { ResultDialog } from "@/components/shared/result-dialog";
 import { memberFormSchema, type MemberFormValues } from "@/app/(sistema)/membros/schema";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,6 +52,8 @@ import { formatCpf } from "@/lib/validate-cpf";
 import { formatDateOfBirthInput } from "@/lib/validate-date-of-birth";
 import {
     userAccessLabels,
+    userGenderLabels,
+    userGenders,
     userPermissionLabels,
     userPermissions,
     userRoleLabels,
@@ -61,13 +61,13 @@ import {
     type Member,
     type MemberCredentials,
     type UserAccess,
+    type UserGender,
     type UserPermission,
     type UserRole,
 } from "@/services/user/user.type";
 import SeparatorSection from "@/components/separator-section";
 import { HugeiconsIcon, IconSvgElement } from "@hugeicons/react";
-import { BirthdayCakeIcon, Call02Icon, IdCardIcon, Key01Icon, Location01Icon, Mail02Icon, PowerIcon, SquareLock01Icon, StarAward02Icon, UserCircleIcon, UserRemove01Icon } from "@hugeicons/core-free-icons";
-import { LordIcon } from "@lordicon/react";
+import { BirthdayCakeIcon, Call02Icon, IdCardIcon, Key01Icon, Location01Icon, Mail02Icon, PowerIcon, SquareLock01Icon, StarAward02Icon, UserCircleIcon, UserRemove01Icon, VenusAndMarsIcon } from "@hugeicons/core-free-icons";
 
 const takenFieldMessages = {
     "Este CPF já está em uso.": {
@@ -87,6 +87,7 @@ const emptyMemberFormValues: MemberFormValues = {
     contact: "",
     address: "",
     dateOfBirth: "",
+    gender: "unspecified",
     role: "member",
     access: "active",
     permission: "read",
@@ -238,28 +239,13 @@ export function MemberDrawer({
                     handleDeleted();
                 }}
             />
-            <SystemDialog
-                mode="auto-close"
+            <ResultDialog
+                status="success"
                 open={successOpen}
                 onOpenChange={setSuccessOpen}
-                title={successKind === "set-password" ? "Senha alterada" : "Membro excluído"}
-                showCloseButton={false}
-                description={successKind === "set-password" ? "Senha alterada com sucesso." : "Membro excluído com sucesso."}
-            >
-                <div className="flex flex-col items-center justify-center">
-                    <LordIcon
-                        icon={animationCheck}
-                        trigger="in"
-                        className="size-24"
-                    />
-                    <h2 className="text-3xl font-bold mt-4">
-                        Deu certo!
-                    </h2>
-                </div>
-                <p className="text-muted-foreground text-center text-lg font-medium">
-                    {successKind === "set-password" ? "Senha alterada com sucesso." : "Membro excluído com sucesso."}
-                </p>
-            </SystemDialog>
+                title="Deu certo!"
+                subtitle={successKind === "set-password" ? "Senha alterada com sucesso." : "Membro excluído com sucesso."}
+            />
         </>
     );
 
@@ -329,13 +315,14 @@ function MemberForm({
     onUpdated: (message: string) => void;
 }) {
     const [takenField, setTakenField] = useState<"cpf" | "email" | null>(null);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     function showActionError(message: string) {
         const taken = takenFieldMessages[message as keyof typeof takenFieldMessages];
 
         if (!taken) {
             setTakenField(null);
-            notify("error", message);
+            setSaveError(message);
             return;
         }
 
@@ -352,7 +339,7 @@ function MemberForm({
             onCreated(data.data, data.message ?? "Membro adicionado com sucesso.");
         },
         onError: ({ error }) => {
-            notify("error", error.serverError ?? "Não foi possível adicionar o membro.");
+            setSaveError(error.serverError ?? "Não foi possível adicionar o membro.");
         },
     });
     const { execute: updateMember, isPending: isUpdating } = useAction(updateMemberAction, {
@@ -365,7 +352,7 @@ function MemberForm({
             onUpdated(data.message ?? "Membro atualizado com sucesso.");
         },
         onError: ({ error }) => {
-            notify("error", error.serverError ?? "Não foi possível editar o membro.");
+            setSaveError(error.serverError ?? "Não foi possível editar o membro.");
         },
     });
     const isPending = isCreating || isUpdating;
@@ -451,7 +438,7 @@ function MemberForm({
                             )}
                         </form.Field>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <form.Field name="contact">
                             {(field) => (
                                 <TextField
@@ -477,6 +464,25 @@ function MemberForm({
                                     attempts={submissionAttempts}
                                     format={formatDateOfBirthInput}
                                     icon={BirthdayCakeIcon}
+                                />
+                            )}
+                        </form.Field>
+                        <form.Field name="gender">
+                            {(field) => (
+                                <ChoiceField
+                                    field={field}
+                                    label="Gênero"
+                                    attempts={submissionAttempts}
+                                    options={userGenders.map((gender) => ({
+                                        value: gender,
+                                        label: userGenderLabels[gender],
+                                    }))}
+                                    onChange={(value) => {
+                                        if (isUserGender(value)) {
+                                            field.handleChange(value);
+                                        }
+                                    }}
+                                    icon={VenusAndMarsIcon}
                                 />
                             )}
                         </form.Field>
@@ -606,6 +612,17 @@ function MemberForm({
                     </DrawerClose>
                 </DrawerFooter>
             )}
+            <ResultDialog
+                status="warning"
+                open={saveError !== null}
+                onOpenChange={(nextOpen) => {
+                    if (!nextOpen) {
+                        setSaveError(null);
+                    }
+                }}
+                title="Não foi possível salvar"
+                subtitle={saveError ?? ""}
+            />
         </>
     );
 }
@@ -638,7 +655,7 @@ function TextField({
         <Field data-invalid={invalid || undefined}>
             <div className="flex items-center gap-2">
                 {icon && <HugeiconsIcon icon={icon} strokeWidth={2} className="pointer-events-none size-4" />}
-                <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+                <FieldLabel htmlFor={field.name} required>{label}</FieldLabel>
             </div>
             <Input
                 id={field.name}
@@ -674,7 +691,7 @@ function AccessField({
                 <FieldContent>
                     <div className="flex items-center gap-2">
                         <HugeiconsIcon icon={PowerIcon} strokeWidth={2} className="pointer-events-none size-4" />
-                        <FieldLabel htmlFor={field.name}>Status do Usuário</FieldLabel>
+                        <FieldLabel htmlFor={field.name} required>Status do Usuário</FieldLabel>
                     </div>
                     <FieldDescription>{userAccessLabels[field.state.value]}</FieldDescription>
                 </FieldContent>
@@ -716,7 +733,7 @@ function ChoiceField({
         <Field data-invalid={invalid || undefined}>
             <div className="flex items-center gap-2">
                 {icon && <HugeiconsIcon icon={icon} strokeWidth={2} className="pointer-events-none size-4" />}
-                <FieldLabel htmlFor={field.name}>{label}</FieldLabel>
+                <FieldLabel htmlFor={field.name} required>{label}</FieldLabel>
             </div>
             <Select value={field.state.value} items={options} onValueChange={onChange}>
                 <SelectTrigger
@@ -795,10 +812,15 @@ function toFormValues(member: Member): MemberFormValues {
         contact: member.contact,
         address: member.address,
         dateOfBirth: member.dateOfBirth,
+        gender: member.gender,
         role: member.role,
         access: member.access,
         permission: member.permission,
     };
+}
+
+function isUserGender(value: string | null): value is UserGender {
+    return userGenders.some((gender) => gender === value);
 }
 
 function isUserRole(value: string | null): value is UserRole {

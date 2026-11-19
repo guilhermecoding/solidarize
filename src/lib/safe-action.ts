@@ -65,3 +65,19 @@ export const writeActionClient = authActionClient.use(async ({ next, ctx }) => {
 
     return next();
 });
+
+export const beneficiaryReadActionClient = authActionClient.use(async ({ next, ctx }) => {
+    if (!hasReadAccess(ctx.actor)) {
+        throw new ActionError("Você não tem permissão para consultar beneficiários.");
+    }
+
+    return next();
+});
+
+export const beneficiaryWriteActionClient = authActionClient.use(async ({ next, ctx }) => {
+    if (!hasWriteAccess(ctx.actor)) {
+        throw new ActionError("Você não tem permissão para alterar beneficiários.");
+    }
+
+    return next();
+});

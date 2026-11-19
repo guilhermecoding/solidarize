@@ -4,19 +4,10 @@ import { useState } from "react";
 
 import { CheckIcon, Copy01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { LordIcon } from "@lordicon/react";
 
-import animationCheck from "@/assets/animations/lottie/check.json" with { type: "json" };
-
+import { ResultDialog } from "@/components/shared/result-dialog";
 import { Button } from "@/components/ui/button";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
+import { DialogFooter } from "@/components/ui/dialog";
 import { notify } from "@/lib/notify";
 
 type MemberCredentialsDialogProps = {
@@ -71,60 +62,46 @@ export function MemberCredentialsDialog({
     }
 
     return (
-        <Dialog
+        <ResultDialog
+            status="success"
             open={open}
+            duration={null}
             disablePointerDismissal
+            title="Deu certo!"
+            subtitle="Copie as informações de acesso abaixo e encaminhe para o membro."
             onOpenChange={(nextOpen, details) => {
                 if (!nextOpen && !copied) {
-                    details.cancel();
+                    details?.cancel();
                     return;
                 }
 
                 onOpenChange(nextOpen);
             }}
         >
-            <DialogContent showCloseButton={false}>
-                <DialogHeader>
-                    <DialogTitle>Membro adicionado</DialogTitle>
-                    <DialogDescription className="sr-only">{message}</DialogDescription>
-                </DialogHeader>
-                <div className="flex flex-col items-center justify-center">
-                    <LordIcon
-                        icon={animationCheck}
-                        trigger="in"
-                        className="size-24"
+            {message ? <p className="sr-only">{message}</p> : null}
+            <div className="rounded-2xl border bg-muted/40 p-4 font-mono text-sm break-all">
+                <p>E-mail: {email}</p>
+                <p className="mt-2">Senha: {password}</p>
+            </div>
+            <DialogFooter className="flex flex-col gap-2 sm:flex-row">
+                <Button type="button" variant="outline" onClick={copyAccess}>
+                    <HugeiconsIcon
+                        icon={
+                            copied ? CheckIcon : Copy01Icon
+                        }
+                        strokeWidth={2}
                     />
-                    <h2 className="text-3xl font-bold mt-4">
-                        Deu certo!
-                    </h2>
-                    <p className="text-lg text-muted-foreground mt-2 text-center">
-                        Copie as informações de acesso abaixo e encaminhe para o membro.
-                    </p>
-                </div>
-                <div className="rounded-2xl border bg-muted/40 p-4 font-mono text-sm break-all">
-                    <p>E-mail: {email}</p>
-                    <p className="mt-2">Senha: {password}</p>
-                </div>
-                <DialogFooter className="flex flex-col sm:flex-row gap-2">
-                    <Button type="button" variant="outline" onClick={copyAccess}>
-                        <HugeiconsIcon
-                            icon={
-                                copied ? CheckIcon : Copy01Icon
-                            }
-                            strokeWidth={2}
-                        />
-                        {copied ? "Copiado" : "Copiar acesso"}
-                    </Button>
-                    <Button
-                        type="button"
-                        variant="default"
-                        disabled={!copied}
-                        onClick={() => onOpenChange(false)}
-                    >
-                        Fechar
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                    {copied ? "Copiado" : "Copiar acesso"}
+                </Button>
+                <Button
+                    type="button"
+                    variant="default"
+                    disabled={!copied}
+                    onClick={() => onOpenChange(false)}
+                >
+                    Fechar
+                </Button>
+            </DialogFooter>
+        </ResultDialog>
     );
 }
