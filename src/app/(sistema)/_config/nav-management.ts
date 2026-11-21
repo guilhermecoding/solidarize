@@ -1,4 +1,4 @@
-import { ServiceIcon, UsersRoundIcon } from "@hugeicons/core-free-icons";
+import { Home04Icon, ServiceIcon, ShoppingBasket03Icon, UsersRoundIcon } from "@hugeicons/core-free-icons";
 import { IconSvgElement } from "@hugeicons/react";
 
 export type NavManagementItem = {
@@ -9,13 +9,24 @@ export type NavManagementItem = {
 
 export const navManagement: NavManagementItem[] = [
     {
-        name: "Membros",
-        url: "/membros",
-        icon: UsersRoundIcon,
+        name: "Início",
+        url: "/inicio",
+        icon: Home04Icon,
     },
     {
         name: "Beneficiários",
         url: "/beneficiarios",
         icon: ServiceIcon,
     },
+    {
+        name: "Membros",
+        url: "/membros",
+        icon: UsersRoundIcon,
+    },
+    {
+        name: "Cestas e Alimentos",
+        url: "/cestas",
+        icon: ShoppingBasket03Icon,
+    }
+
 ];
