@@ -1,3 +1,6 @@
+import { BananaIcon, BeanIcon, BiscuitIcon, Coffee02Icon, HamIcon, IceCubesIcon, LeafyGreenIcon, MilkCartonIcon, MilkIcon, NoodlesIcon, PopcornIcon, RainDropIcon, RiceBowl01Icon, WeightScale01Icon, WheatIcon } from "@hugeicons/core-free-icons";
+import type { IconSvgElement } from "@hugeicons/react";
+
 import type { ExpiryStatus } from "@/lib/date-br";
 
 export const foodTypes = [
@@ -36,6 +39,24 @@ export const foodTypeLabels: Record<FoodType, string> = {
     biscoitos: "Biscoitos",
     temperos: "Temperos",
     bebidas: "Bebidas",
+};
+
+export const foodTypeIcons: Record<FoodType, IconSvgElement> = {
+    arroz: RiceBowl01Icon,
+    feijao: BeanIcon,
+    massas: NoodlesIcon,
+    farinhas: WheatIcon,
+    frutas: BananaIcon,
+    verduras_e_legumes: LeafyGreenIcon,
+    carnes_e_ovos: HamIcon,
+    leites_e_derivados: MilkCartonIcon,
+    acucar: IceCubesIcon,
+    oleo: RainDropIcon,
+    sal: WeightScale01Icon,
+    cafe: Coffee02Icon,
+    biscoitos: BiscuitIcon,
+    temperos: PopcornIcon,
+    bebidas: MilkIcon,
 };
 
 /**

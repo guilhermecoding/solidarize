@@ -47,7 +47,7 @@ import {
 } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatBrazilianDateInput } from "@/lib/date-br";
-import { foodTypeLabels, foodTypes } from "@/services/food/food.type";
+import { foodTypeIcons, foodTypeLabels, foodTypes } from "@/services/food/food.type";
 
 type FoodDrawerProps = {
     open: boolean;
@@ -55,10 +55,13 @@ type FoodDrawerProps = {
     onCreated: (message: string) => void;
 };
 
-const foodTypeOptions = foodTypes.map((type) => ({
-    value: type,
-    label: foodTypeLabels[type],
-}));
+const foodTypeOptions = [...foodTypes]
+    .map((type) => ({
+        value: type,
+        label: foodTypeLabels[type],
+        icon: foodTypeIcons[type],
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label, "pt-BR"));
 
 /**
  * Dialog/Drawer para cadastrar um novo alimento no estoque.
@@ -232,7 +235,12 @@ function FoodForm({
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {foodTypeOptions.map((option) => (
-                                                    <SelectItem key={option.value} value={option.value}>
+                                                    <SelectItem key={option.value} value={option.value} className="text-lg flex items-center gap-2">
+                                                        <HugeiconsIcon
+                                                            icon={option.icon}
+                                                            strokeWidth={2}
+                                                            className="size-5 text-muted-foreground"
+                                                        />
                                                         {option.label}
                                                     </SelectItem>
                                                 ))}
