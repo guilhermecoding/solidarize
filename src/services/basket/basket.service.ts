@@ -355,7 +355,21 @@ export async function listBaskets(): Promise<BasketRecord[]> {
                 select: { name: true },
             },
             foods: {
-                select: { foodId: true },
+                include: {
+                    food: {
+                        select: {
+                            id: true,
+                            label: true,
+                            type: true,
+                            batch: true,
+                        },
+                    },
+                },
+                orderBy: {
+                    food: {
+                        label: "asc",
+                    },
+                },
             },
         },
     });
@@ -368,6 +382,16 @@ export async function listBaskets(): Promise<BasketRecord[]> {
         templateName: row.template?.name ?? null,
         deletedTemplateName: row.deletedTemplateName ?? null,
         foodIds: row.foods.map((item) => item.foodId),
+        foods: row.foods.map((item) => {
+            const type = isFoodType(item.food.type) ? item.food.type : "arroz";
+
+            return {
+                id: item.food.id,
+                label: item.food.label,
+                typeLabel: foodTypeLabels[type],
+                batch: item.food.batch,
+            };
+        }),
         foodCount: row.foods.length,
         createdByName: row.createdByName,
         createdAtLabel: formatDateTimeBr(row.createdAt),

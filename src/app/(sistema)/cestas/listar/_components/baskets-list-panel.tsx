@@ -118,10 +118,10 @@ function BasketGroupSection({
                     <p className="text-sm">{emptyMessage}</p>
                 </div>
             ) : (
-                <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                <ul className="grid grid-cols-1 items-start gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {baskets.map((basket) => (
                         <li key={basket.id}>
-                            <article className="flex aspect-square flex-col justify-between rounded-2xl border bg-card p-5 text-card-foreground">
+                            <article className="flex flex-col gap-4 rounded-2xl border bg-card p-5 text-card-foreground">
                                 <div className="flex items-start justify-between gap-2">
                                     <span className="flex size-10 items-center justify-center rounded-xl bg-muted">
                                         <HugeiconsIcon
@@ -172,6 +172,25 @@ function BasketGroupSection({
                                             ? `${basket.quantity} em estoque`
                                             : "0 em estoque"}
                                     </Badge>
+                                </div>
+
+                                <div className="flex flex-col gap-2 border-t pt-3">
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        Alimentos ({basket.foodCount})
+                                    </span>
+                                    {basket.foods.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground">
+                                            Nenhum alimento vinculado.
+                                        </p>
+                                    ) : (
+                                        <ul className="flex flex-wrap gap-1.5">
+                                            {basket.foods.map((food) => (
+                                                <li key={food.id}>
+                                                    <Badge variant="muted">{food.label}</Badge>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
                                 </div>
                             </article>
                         </li>

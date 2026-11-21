@@ -24,6 +24,7 @@ export type BasketRecord = {
     templateName: string | null;
     deletedTemplateName: string | null;
     foodIds: string[];
+    foods: BasketTemplateFoodItem[];
     foodCount: number;
     createdByName: string;
     createdAtLabel: string;
