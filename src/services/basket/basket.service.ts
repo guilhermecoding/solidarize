@@ -240,6 +240,35 @@ export async function deleteBasketTemplate(id: string): Promise<ServerResponse> 
 }
 
 /**
+ * Retorna a prévia em cache do próximo nome sequencial diário de cesta (DD-MM-AAAA-NN).
+ */
+export async function getNextBasketName(): Promise<string> {
+    "use cache";
+    cacheTag(BASKET_CACHE_TAG);
+    cacheLife("minutes");
+
+    return readNextBasketName();
+}
+
+/**
+ * Consulta sem cache o próximo nome sequencial diário de cesta (DD-MM-AAAA-NN).
+ */
+export async function getFreshNextBasketName(): Promise<string> {
+    return readNextBasketName();
+}
+
+async function readNextBasketName(): Promise<string> {
+    const dateKey = getBrazilDateKey(new Date());
+    const sequence = await prisma.basketSequence.findUnique({
+        where: { dateKey },
+        select: { lastNumber: true },
+    });
+
+    const nextNumber = (sequence?.lastNumber ?? 0) + 1;
+    return `${dateKey}-${String(nextNumber).padStart(2, "0")}`;
+}
+
+/**
  * Lista todas as cestas cadastradas da mais recente para a mais antiga.
  */
 export async function listBaskets(): Promise<BasketRecord[]> {

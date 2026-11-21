@@ -19,7 +19,7 @@ import type { FoodOptionRecord } from "@/services/food/food.type";
 
 type CestasHubPanelProps = {
     canWrite: boolean;
-    currentUserName: string;
+    nextBasketName: string;
     templates: BasketTemplateRecord[];
     foods: FoodOptionRecord[];
 };
@@ -29,7 +29,7 @@ type CestasHubPanelProps = {
  */
 export function CestasHubPanel({
     canWrite: initialCanWrite,
-    currentUserName,
+    nextBasketName,
     templates,
     foods,
 }: CestasHubPanelProps) {
@@ -72,7 +72,7 @@ export function CestasHubPanel({
                     <BasketDrawer
                         open={activeAction === "new-basket"}
                         basket={null}
-                        currentUserName={currentUserName}
+                        nextBasketName={nextBasketName}
                         templates={templates}
                         foods={foods}
                         onOpenChange={(nextOpen) => {

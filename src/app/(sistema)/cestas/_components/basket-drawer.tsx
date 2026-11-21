@@ -1,19 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useAction } from "next-safe-action/hooks";
 import {
-    Calendar03Icon,
     GridViewIcon,
     Layers01Icon,
     Package01Icon,
     ShoppingBasket03Icon,
-    UserCircleIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
-import { createBasketAction, updateBasketAction } from "@/app/(sistema)/cestas/action";
+import {
+    createBasketAction,
+    getNextBasketNameAction,
+    updateBasketAction,
+} from "@/app/(sistema)/cestas/action";
 import { FoodCheckboxBox } from "@/app/(sistema)/cestas/_components/food-checkbox-box";
 import { QuantityStepper } from "@/app/(sistema)/cestas/_components/quantity-stepper";
 import {
@@ -43,7 +45,7 @@ import {
     DrawerHeader,
     DrawerTitle,
 } from "@/components/ui/drawer";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
     Select,
@@ -59,7 +61,7 @@ import type { FoodOptionRecord } from "@/services/food/food.type";
 type BasketDrawerProps = {
     open: boolean;
     basket: BasketRecord | null;
-    currentUserName: string;
+    nextBasketName?: string;
     templates: BasketTemplateRecord[];
     foods: FoodOptionRecord[];
     onOpenChange: (open: boolean) => void;
@@ -72,7 +74,7 @@ type BasketDrawerProps = {
 export function BasketDrawer({
     open,
     basket,
-    currentUserName,
+    nextBasketName = "",
     templates,
     foods,
     onOpenChange,
@@ -87,8 +89,9 @@ export function BasketDrawer({
     const formContent = (
         <BasketForm
             key={basket?.id ?? (open ? "new-open" : "new-closed")}
+            open={open}
             basket={basket}
-            currentUserName={currentUserName}
+            nextBasketName={nextBasketName}
             templates={templates}
             foods={foods}
             surface={isMobile ? "drawer" : "dialog"}
@@ -137,23 +140,44 @@ export function BasketDrawer({
 }
 
 function BasketForm({
+    open,
     basket,
-    currentUserName,
+    nextBasketName,
     templates,
     foods,
     surface,
     onSaved,
 }: {
+    open: boolean;
     basket: BasketRecord | null;
-    currentUserName: string;
+    nextBasketName: string;
     templates: BasketTemplateRecord[];
     foods: FoodOptionRecord[];
     surface: "drawer" | "dialog";
     onSaved: (message: string) => void;
 }) {
+    const [generatedName, setGeneratedName] = useState(nextBasketName);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [pendingEmptyFoodsValue, setPendingEmptyFoodsValue] =
         useState<CreateBasketFormValues | null>(null);
+
+    useEffect(() => {
+        if (!open || basket) {
+            return;
+        }
+
+        let cancelled = false;
+
+        void getNextBasketNameAction().then((result) => {
+            if (!cancelled && result?.data) {
+                setGeneratedName(result.data);
+            }
+        });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [open, basket]);
 
     const availableFoodIds = new Set(foods.map((food) => food.id));
     const previouslySelectedIds = basket ? new Set(basket.foodIds) : undefined;
@@ -288,44 +312,23 @@ function BasketForm({
                 }}
             >
                 <FieldGroup className="flex flex-1 flex-col">
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        <Field>
-                            <div className="flex items-center gap-2">
-                                <HugeiconsIcon icon={ShoppingBasket03Icon} strokeWidth={2} className="size-4" />
-                                <FieldLabel htmlFor="basket-name" required>Nome</FieldLabel>
-                            </div>
-                            <Input
-                                id="basket-name"
-                                value={basket ? basket.name : "Gerado automaticamente (DD-MM-AAAA-NN)"}
-                                disabled
-                                readOnly
-                            />
-                        </Field>
-                        <Field>
-                            <div className="flex items-center gap-2">
-                                <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-4" />
-                                <FieldLabel htmlFor="basket-created-at" required>Data e Hora</FieldLabel>
-                            </div>
-                            <Input
-                                id="basket-created-at"
-                                value={basket ? basket.createdAtLabel : "Gerado automaticamente"}
-                                disabled
-                                readOnly
-                            />
-                        </Field>
-                        <Field>
-                            <div className="flex items-center gap-2">
-                                <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} className="size-4" />
-                                <FieldLabel htmlFor="basket-creator" required>Quem Criou</FieldLabel>
-                            </div>
-                            <Input
-                                id="basket-creator"
-                                value={basket ? basket.createdByName : currentUserName}
-                                disabled
-                                readOnly
-                            />
-                        </Field>
-                    </div>
+                    <Field>
+                        <div className="flex items-center gap-2">
+                            <HugeiconsIcon icon={ShoppingBasket03Icon} strokeWidth={2} className="size-4" />
+                            <FieldLabel htmlFor="basket-name" required>Nome</FieldLabel>
+                        </div>
+                        <Input
+                            id="basket-name"
+                            aria-describedby="basket-name-hint"
+                            value={basket ? basket.name : generatedName}
+                            placeholder="Gerando nome..."
+                            disabled
+                            readOnly
+                        />
+                        <FieldDescription id="basket-name-hint" className="text-xs">
+                            Não é possível modificar
+                        </FieldDescription>
+                    </Field>
 
                     <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <form.Field name="templateId">

@@ -18,6 +18,7 @@ import {
     createBasket,
     createBasketTemplate,
     deleteBasketTemplate,
+    getFreshNextBasketName,
     updateBasket,
     updateBasketTemplate,
 } from "@/services/basket/basket.service";
@@ -66,6 +67,10 @@ function refreshInventory({
 
     revalidatePath("/cestas");
 }
+
+export const getNextBasketNameAction = inventoryWriteActionClient.action(async () => {
+    return getFreshNextBasketName();
+});
 
 export const createBasketAction = inventoryWriteActionClient
     .inputSchema(createBasketSchema)

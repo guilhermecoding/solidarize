@@ -28,7 +28,6 @@ export async function BasketsListSection() {
         <BasketsListPanel
             baskets={baskets}
             canWrite={canWrite}
-            currentUserName={user.name}
             templates={templates}
             foods={foods}
         />

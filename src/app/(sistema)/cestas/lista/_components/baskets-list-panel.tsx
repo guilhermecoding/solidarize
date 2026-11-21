@@ -16,7 +16,6 @@ import type { FoodOptionRecord } from "@/services/food/food.type";
 type BasketsListPanelProps = {
     baskets: BasketRecord[];
     canWrite: boolean;
-    currentUserName: string;
     templates: BasketTemplateRecord[];
     foods: FoodOptionRecord[];
 };
@@ -27,7 +26,6 @@ type BasketsListPanelProps = {
 export function BasketsListPanel({
     baskets,
     canWrite: initialCanWrite,
-    currentUserName,
     templates,
     foods,
 }: BasketsListPanelProps) {
@@ -64,7 +62,6 @@ export function BasketsListPanel({
                 <BasketDrawer
                     open={editing !== null}
                     basket={editing}
-                    currentUserName={currentUserName}
                     templates={templates}
                     foods={foods}
                     onOpenChange={(nextOpen) => {
