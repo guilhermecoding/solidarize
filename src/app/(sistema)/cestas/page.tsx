@@ -1,10 +1,11 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 
+import { CestasHubSection } from "@/app/(sistema)/cestas/_components/cestas-hub-section";
+import { CestasHubSkeleton } from "@/app/(sistema)/cestas/_components/cestas-hub-skeleton";
 import Page from "@/components/shared/page";
 import Section from "@/components/shared/section";
 import TitlePage from "@/components/title-page";
-import { ModuleSection } from "@/app/(sistema)/cestas/_components/module-section";
-import { basketModules, foodModules } from "@/app/(sistema)/cestas/_config/modules";
 
 export const metadata: Metadata = {
     title: "Cestas e Alimentos",
@@ -24,8 +25,9 @@ export default function BasketsAndFoodsPage() {
                 />
             </Section>
 
-            <ModuleSection group={basketModules} />
-            <ModuleSection group={foodModules} />
+            <Suspense fallback={<CestasHubSkeleton />}>
+                <CestasHubSection />
+            </Suspense>
         </Page>
     );
 }
