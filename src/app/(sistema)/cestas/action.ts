@@ -43,7 +43,7 @@ function refreshInventory({
 }) {
     if (baskets) {
         updateTag(BASKET_CACHE_TAG);
-        revalidatePath("/cestas/lista");
+        revalidatePath("/cestas/listar");
     }
 
     if (templates) {

@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 
-import { BasketsListPanel } from "@/app/(sistema)/cestas/lista/_components/baskets-list-panel";
+import { BasketsListPanel } from "@/app/(sistema)/cestas/listar/_components/baskets-list-panel";
 import { getCurrentUser } from "@/lib/current-user";
 import { hasReadAccess, hasWriteAccess } from "@/lib/member-access";
 import { listBaskets, listBasketTemplates } from "@/services/basket/basket.service";
 import { listFoodOptions } from "@/services/food/food.service";
 
 /**
- * Carrega cestas, modelos e alimentos autorizados para a página /cestas/lista.
+ * Carrega cestas, modelos e alimentos autorizados para a página /cestas/listar.
  */
 export async function BasketsListSection() {
     const user = await getCurrentUser();

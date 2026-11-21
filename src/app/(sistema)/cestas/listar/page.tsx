@@ -1,8 +1,8 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 
-import { BasketsListSection } from "@/app/(sistema)/cestas/lista/_components/baskets-list-section";
-import { BasketsListSkeleton } from "@/app/(sistema)/cestas/lista/_components/baskets-list-skeleton";
+import { BasketsListSection } from "@/app/(sistema)/cestas/listar/_components/baskets-list-section";
+import { BasketsListSkeleton } from "@/app/(sistema)/cestas/listar/_components/baskets-list-skeleton";
 import Page from "@/components/shared/page";
 import Section from "@/components/shared/section";
 import TitlePage from "@/components/title-page";

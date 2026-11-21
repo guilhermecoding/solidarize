@@ -59,7 +59,7 @@ export const basketModules: ModuleGroup = {
             title: "Listar Cestas",
             description: "Visualize todas as cestas montadas e prontas para entrega.",
             actionLabel: "Acessar listagem",
-            href: "/cestas/lista",
+            href: "/cestas/listar",
             icon: ListViewIcon,
         },
         {
