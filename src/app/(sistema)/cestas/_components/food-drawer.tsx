@@ -13,9 +13,14 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
-import { createFoodAction } from "@/app/(sistema)/cestas/action";
+import { createFoodAction, updateFoodAction } from "@/app/(sistema)/cestas/action";
 import { QuantityStepper } from "@/app/(sistema)/cestas/_components/quantity-stepper";
-import { createFoodSchema, emptyCreateFoodFormValues } from "@/app/(sistema)/cestas/schema";
+import {
+    createFoodSchema,
+    editFoodFormSchema,
+    emptyCreateFoodFormValues,
+    type CreateFoodFormValues,
+} from "@/app/(sistema)/cestas/schema";
 import { ResultDialog } from "@/components/shared/result-dialog";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,7 +41,13 @@ import {
     DrawerHeader,
     DrawerTitle,
 } from "@/components/ui/drawer";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+    Field,
+    FieldDescription,
+    FieldError,
+    FieldGroup,
+    FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
     Select,
@@ -47,12 +58,18 @@ import {
 } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { formatBrazilianDateInput } from "@/lib/date-br";
-import { foodTypeIcons, foodTypeLabels, foodTypes } from "@/services/food/food.type";
+import {
+    foodTypeIcons,
+    foodTypeLabels,
+    foodTypes,
+    type FoodRecord,
+} from "@/services/food/food.type";
 
 type FoodDrawerProps = {
     open: boolean;
+    food?: FoodRecord | null;
     onOpenChange: (open: boolean) => void;
-    onCreated: (message: string) => void;
+    onSaved: (message: string) => void;
 };
 
 const foodTypeOptions = [...foodTypes]
@@ -64,18 +81,21 @@ const foodTypeOptions = [...foodTypes]
     .sort((left, right) => left.label.localeCompare(right.label, "pt-BR"));
 
 /**
- * Dialog/Drawer para cadastrar um novo alimento no estoque.
+ * Dialog/Drawer para cadastrar um novo alimento ou editar um alimento existente.
  */
-export function FoodDrawer({ open, onOpenChange, onCreated }: FoodDrawerProps) {
+export function FoodDrawer({ open, food = null, onOpenChange, onSaved }: FoodDrawerProps) {
     const isMobile = useIsMobile();
-    const title = "Novo Alimento";
-    const description = "Adicione novos itens ao estoque informando validade, marca e quantidade.";
+    const title = food ? `Editar Alimento #${food.batch}` : "Novo Alimento";
+    const description = food
+        ? "Atualize as informações e a quantidade em estoque deste alimento."
+        : "Adicione novos itens ao estoque informando validade, marca e quantidade.";
 
     const formContent = (
         <FoodForm
-            key={open ? "food-open" : "food-closed"}
+            key={food?.id ?? (open ? "food-open" : "food-closed")}
+            food={food}
             surface={isMobile ? "drawer" : "dialog"}
-            onCreated={onCreated}
+            onSaved={onSaved}
         />
     );
 
@@ -120,34 +140,68 @@ export function FoodDrawer({ open, onOpenChange, onCreated }: FoodDrawerProps) {
 }
 
 function FoodForm({
+    food,
     surface,
-    onCreated,
+    onSaved,
 }: {
+    food: FoodRecord | null;
     surface: "drawer" | "dialog";
-    onCreated: (message: string) => void;
+    onSaved: (message: string) => void;
 }) {
     const [saveError, setSaveError] = useState<string | null>(null);
 
-    const { execute: createFood, isPending } = useAction(createFoodAction, {
+    const { execute: createFood, isPending: isCreating } = useAction(createFoodAction, {
         onSuccess: ({ data }) => {
             if (!data.ok) {
                 setSaveError(data.message);
                 return;
             }
 
-            onCreated(data.message ?? "Alimento cadastrado com sucesso.");
+            onSaved(data.message ?? "Alimento cadastrado com sucesso.");
         },
         onError: ({ error }) => {
             setSaveError(error.serverError ?? "Não foi possível cadastrar o alimento.");
         },
     });
 
+    const { execute: updateFood, isPending: isUpdating } = useAction(updateFoodAction, {
+        onSuccess: ({ data }) => {
+            if (!data.ok) {
+                setSaveError(data.message);
+                return;
+            }
+
+            onSaved(data.message ?? "Alimento atualizado com sucesso.");
+        },
+        onError: ({ error }) => {
+            setSaveError(error.serverError ?? "Não foi possível atualizar o alimento.");
+        },
+    });
+
+    const isPending = isCreating || isUpdating;
+
+    const initialValues: CreateFoodFormValues = food
+        ? {
+            label: food.label,
+            type: food.type,
+            expiresAt: food.expiresAtLabel ?? "",
+            brand: food.brand,
+            quantity: food.quantity,
+            productCode: food.productCode,
+        }
+        : emptyCreateFoodFormValues;
+
     const form = useForm({
-        defaultValues: emptyCreateFoodFormValues,
+        defaultValues: initialValues,
         validators: {
-            onSubmit: createFoodSchema,
+            onSubmit: food ? editFoodFormSchema : createFoodSchema,
         },
         onSubmit: ({ value }) => {
+            if (food) {
+                updateFood({ id: food.id, ...value });
+                return;
+            }
+
             createFood(value);
         },
     });
@@ -235,7 +289,11 @@ function FoodForm({
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {foodTypeOptions.map((option) => (
-                                                    <SelectItem key={option.value} value={option.value} className="text-lg flex items-center gap-2">
+                                                    <SelectItem
+                                                        key={option.value}
+                                                        value={option.value}
+                                                        className="flex items-center gap-2 text-lg"
+                                                    >
                                                         <HugeiconsIcon
                                                             icon={option.icon}
                                                             strokeWidth={2}
@@ -252,7 +310,7 @@ function FoodForm({
                             }}
                         </form.Field>
 
-                        <form.Field name="brand">
+                        <form.Field name="quantity">
                             {(field) => {
                                 const errors = extractErrors(
                                     field.state.meta.errors,
@@ -264,17 +322,18 @@ function FoodForm({
                                 return (
                                     <Field data-invalid={invalid || undefined}>
                                         <div className="flex items-center gap-2">
-                                            <HugeiconsIcon icon={Store01Icon} strokeWidth={2} className="size-4" />
-                                            <FieldLabel htmlFor={field.name}>Marca</FieldLabel>
+                                            <HugeiconsIcon icon={Layers01Icon} strokeWidth={2} className="size-4" />
+                                            <FieldLabel htmlFor={field.name} required>Quantidade</FieldLabel>
                                         </div>
-                                        <Input
+                                        <QuantityStepper
                                             id={field.name}
                                             name={field.name}
-                                            placeholder="Ex: Tio João"
                                             value={field.state.value}
+                                            min={food ? 0 : 1}
+                                            disabled={isPending}
+                                            invalid={invalid}
+                                            onChange={field.handleChange}
                                             onBlur={field.handleBlur}
-                                            onChange={(event) => field.handleChange(event.target.value)}
-                                            aria-invalid={invalid || undefined}
                                         />
                                         <FieldError errors={errors} />
                                     </Field>
@@ -317,6 +376,38 @@ function FoodForm({
                             }}
                         </form.Field>
 
+                        <form.Field name="brand">
+                            {(field) => {
+                                const errors = extractErrors(
+                                    field.state.meta.errors,
+                                    field.state.meta.isTouched,
+                                    submissionAttempts,
+                                );
+                                const invalid = errors.length > 0;
+
+                                return (
+                                    <Field data-invalid={invalid || undefined}>
+                                        <div className="flex items-center gap-2">
+                                            <HugeiconsIcon icon={Store01Icon} strokeWidth={2} className="size-4" />
+                                            <FieldLabel htmlFor={field.name}>Marca</FieldLabel>
+                                        </div>
+                                        <Input
+                                            id={field.name}
+                                            name={field.name}
+                                            placeholder="Ex: Tio João"
+                                            value={field.state.value}
+                                            onBlur={field.handleBlur}
+                                            onChange={(event) => field.handleChange(event.target.value)}
+                                            aria-invalid={invalid || undefined}
+                                        />
+                                        <FieldError errors={errors} />
+                                    </Field>
+                                );
+                            }}
+                        </form.Field>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <form.Field name="productCode">
                             {(field) => {
                                 const errors = extractErrors(
@@ -346,39 +437,6 @@ function FoodForm({
                                 );
                             }}
                         </form.Field>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                        <form.Field name="quantity">
-                            {(field) => {
-                                const errors = extractErrors(
-                                    field.state.meta.errors,
-                                    field.state.meta.isTouched,
-                                    submissionAttempts,
-                                );
-                                const invalid = errors.length > 0;
-
-                                return (
-                                    <Field data-invalid={invalid || undefined}>
-                                        <div className="flex items-center gap-2">
-                                            <HugeiconsIcon icon={Layers01Icon} strokeWidth={2} className="size-4" />
-                                            <FieldLabel htmlFor={field.name} required>Quantidade</FieldLabel>
-                                        </div>
-                                        <QuantityStepper
-                                            id={field.name}
-                                            name={field.name}
-                                            value={field.state.value}
-                                            min={1}
-                                            disabled={isPending}
-                                            invalid={invalid}
-                                            onChange={field.handleChange}
-                                            onBlur={field.handleBlur}
-                                        />
-                                        <FieldError errors={errors} />
-                                    </Field>
-                                );
-                            }}
-                        </form.Field>
 
                         <Field>
                             <div className="flex items-center gap-2">
@@ -387,10 +445,14 @@ function FoodForm({
                             </div>
                             <Input
                                 id="food-batch"
-                                value="Gerado automaticamente (#XXXXXXXX)"
+                                aria-describedby="food-batch-hint"
+                                value={food ? `#${food.batch}` : "Gerado automaticamente (#XXXXXXXX)"}
                                 disabled
                                 readOnly
                             />
+                            <FieldDescription id="food-batch-hint" className="text-xs">
+                                Não é possível modificar
+                            </FieldDescription>
                         </Field>
                     </div>
                 </FieldGroup>

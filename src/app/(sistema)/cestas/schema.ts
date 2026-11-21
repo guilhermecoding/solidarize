@@ -73,11 +73,20 @@ export const createFoodSchema = z.object({
     productCode: z.string().trim().max(120, "O código do produto deve ter no máximo 120 caracteres."),
 });
 
+export const editFoodFormSchema = createFoodSchema.extend({
+    quantity: z.number().int("Informe uma quantidade inteira.").min(0, "A quantidade não pode ser negativa."),
+});
+
+export const updateFoodSchema = editFoodFormSchema.extend({
+    id: z.string().trim().min(1, "Alimento inválido."),
+});
+
 export type CreateBasketFormValues = z.infer<typeof createBasketSchema>;
 export type UpdateBasketFormValues = z.infer<typeof updateBasketSchema>;
 export type BasketTemplateFormValues = z.infer<typeof basketTemplateSchema>;
 export type UpdateBasketTemplateFormValues = z.infer<typeof updateBasketTemplateSchema>;
 export type CreateFoodFormValues = z.infer<typeof createFoodSchema>;
+export type UpdateFoodFormValues = z.infer<typeof updateFoodSchema>;
 
 export const emptyCreateBasketFormValues: CreateBasketFormValues = {
     templateId: "new",

@@ -1,10 +1,19 @@
+export type BasketTemplateFoodItem = {
+    id: string;
+    label: string;
+    typeLabel: string;
+    batch: string;
+};
+
 export type BasketTemplateRecord = {
     id: string;
     name: string;
     foodIds: string[];
+    foods: BasketTemplateFoodItem[];
     foodCount: number;
     createdByName: string;
     createdAtLabel: string;
+    createdAtDateLabel: string;
 };
 
 export type BasketRecord = {

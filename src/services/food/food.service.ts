@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { serverFailure, serverSuccess, type ServerResponse } from "@/@types/server-response";
-import { createFoodSchema } from "@/app/(sistema)/cestas/schema";
+import { createFoodSchema, updateFoodSchema } from "@/app/(sistema)/cestas/schema";
 import { Prisma } from "@/generated/prisma/client";
 import {
     formatDateBr,
@@ -28,6 +28,7 @@ import {
     type FoodType,
     type HistoryPage,
     type InventoryActor,
+    type UpdateFoodInput,
 } from "@/services/food/food.type";
 
 export const FOOD_CACHE_TAG = "foods";
@@ -260,6 +261,100 @@ export async function createFood(
     }
 
     return serverFailure("Não foi possível gerar um lote único. Tente novamente.");
+}
+
+/**
+ * Atualiza um alimento existente mantendo o lote imutável e registrando alterações de estoque no histórico.
+ */
+export async function updateFood(
+    actor: InventoryActor,
+    input: UpdateFoodInput,
+): Promise<ServerResponse> {
+    const parsed = updateFoodSchema.safeParse(input);
+
+    if (!parsed.success) {
+        return serverFailure(parsed.error.issues[0]?.message ?? "Dados inválidos.");
+    }
+
+    const value = parsed.data;
+    const expiresAt = value.expiresAt === "" ? null : parseBrazilianDateInput(value.expiresAt);
+
+    if (value.expiresAt !== "" && !expiresAt) {
+        return serverFailure("Informe uma data válida no formato DD/MM/AAAA.");
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+        const current = await tx.food.findUnique({
+            where: { id: value.id },
+            select: {
+                id: true,
+                batch: true,
+                quantity: true,
+            },
+        });
+
+        if (!current) {
+            return { type: "missing" as const };
+        }
+
+        await tx.food.update({
+            where: { id: value.id },
+            data: {
+                label: value.label,
+                type: value.type,
+                expiresAt,
+                brand: emptyToNull(value.brand),
+                quantity: value.quantity,
+                productCode: emptyToNull(value.productCode),
+            },
+        });
+
+        const delta = value.quantity - current.quantity;
+
+        if (delta > 0) {
+            await tx.foodHistory.create({
+                data: {
+                    foodId: current.id,
+                    foodLabel: value.label,
+                    foodBatch: current.batch,
+                    type: "in",
+                    quantity: delta,
+                    description:
+                        delta === 1
+                            ? `1 unidade de ${value.label} adicionada manualmente`
+                            : `${delta} unidades de ${value.label} adicionadas manualmente`,
+                    createdById: actor.id,
+                    createdByName: actor.name,
+                },
+            });
+        } else if (delta < 0) {
+            const removed = Math.abs(delta);
+
+            await tx.foodHistory.create({
+                data: {
+                    foodId: current.id,
+                    foodLabel: value.label,
+                    foodBatch: current.batch,
+                    type: "out",
+                    quantity: removed,
+                    description:
+                        removed === 1
+                            ? `1 unidade de ${value.label} retirada manualmente`
+                            : `${removed} unidades de ${value.label} retiradas manualmente`,
+                    createdById: actor.id,
+                    createdByName: actor.name,
+                },
+            });
+        }
+
+        return { type: "ok" as const };
+    });
+
+    if (result.type === "missing") {
+        return serverFailure("Alimento não encontrado.");
+    }
+
+    return serverSuccess(undefined, "Alimento atualizado com sucesso.");
 }
 
 function toFoodRecord(

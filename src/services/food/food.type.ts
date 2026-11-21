@@ -134,3 +134,7 @@ export type CreateFoodInput = {
     quantity: number;
     productCode: string;
 };
+
+export type UpdateFoodInput = CreateFoodInput & {
+    id: string;
+};

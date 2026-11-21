@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 import { FoodsListPanel } from "@/app/(sistema)/cestas/alimentos/listar/_components/foods-list-panel";
 import { getCurrentUser } from "@/lib/current-user";
-import { hasReadAccess } from "@/lib/member-access";
+import { hasReadAccess, hasWriteAccess } from "@/lib/member-access";
 import { listFoodsPage } from "@/services/food/food.service";
 import type { FoodListTab } from "@/services/food/food.type";
 
@@ -34,5 +34,5 @@ export async function FoodsListSection({
         pageSize: 15,
     });
 
-    return <FoodsListPanel data={data} />;
+    return <FoodsListPanel data={data} canWrite={hasWriteAccess(user)} />;
 }

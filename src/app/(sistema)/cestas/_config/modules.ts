@@ -8,7 +8,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 
-export type HubAction = "new-basket" | "basket-templates" | "new-food";
+export type HubAction = "new-basket" | "new-food";
 
 type BaseModuleItem = {
     id: string;
@@ -64,11 +64,11 @@ export const basketModules: ModuleGroup = {
         },
         {
             id: "modelos-cesta",
-            kind: "action",
+            kind: "link",
             title: "Modelos de Cesta",
             description: "Defina padrões pré-configurados de cestas.",
             actionLabel: "Gerenciar templates",
-            action: "basket-templates",
+            href: "/cestas/modelos",
             icon: GridViewIcon,
         },
         {

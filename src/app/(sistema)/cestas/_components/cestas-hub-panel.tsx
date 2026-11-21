@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { BasketDrawer } from "@/app/(sistema)/cestas/_components/basket-drawer";
-import { BasketTemplateDrawer } from "@/app/(sistema)/cestas/_components/basket-template-drawer";
 import { FoodDrawer } from "@/app/(sistema)/cestas/_components/food-drawer";
 import { ModuleSection } from "@/app/(sistema)/cestas/_components/module-section";
 import {
@@ -82,17 +81,6 @@ export function CestasHubPanel({
                         }}
                         onSaved={handleSuccess}
                     />
-                    <BasketTemplateDrawer
-                        open={activeAction === "basket-templates"}
-                        templates={templates}
-                        foods={foods}
-                        onOpenChange={(nextOpen) => {
-                            if (!nextOpen) {
-                                setActiveAction(null);
-                            }
-                        }}
-                        onChanged={handleSuccess}
-                    />
                     <FoodDrawer
                         open={activeAction === "new-food"}
                         onOpenChange={(nextOpen) => {
@@ -100,7 +88,7 @@ export function CestasHubPanel({
                                 setActiveAction(null);
                             }
                         }}
-                        onCreated={handleSuccess}
+                        onSaved={handleSuccess}
                     />
                 </>
             ) : null}

@@ -9,6 +9,7 @@ import {
     deleteBasketTemplateSchema,
     updateBasketSchema,
     updateBasketTemplateSchema,
+    updateFoodSchema,
 } from "@/app/(sistema)/cestas/schema";
 import { inventoryWriteActionClient } from "@/lib/safe-action";
 import {
@@ -26,6 +27,7 @@ import {
     FOOD_CACHE_TAG,
     FOOD_HISTORY_CACHE_TAG,
     createFood,
+    updateFood,
 } from "@/services/food/food.service";
 
 function refreshInventory({
@@ -48,6 +50,7 @@ function refreshInventory({
 
     if (templates) {
         updateTag(BASKET_TEMPLATE_CACHE_TAG);
+        revalidatePath("/cestas/modelos");
     }
 
     if (basketHistory) {
@@ -58,6 +61,7 @@ function refreshInventory({
     if (foods) {
         updateTag(FOOD_CACHE_TAG);
         revalidatePath("/cestas/alimentos/listar");
+        revalidatePath("/cestas/modelos");
     }
 
     if (foodHistory) {
@@ -162,6 +166,21 @@ export const createFoodAction = inventoryWriteActionClient
 
         if (result.ok) {
             refreshInventory({ foods: true, foodHistory: true });
+        }
+
+        return result;
+    });
+
+export const updateFoodAction = inventoryWriteActionClient
+    .inputSchema(updateFoodSchema)
+    .action(async ({ parsedInput, ctx }) => {
+        const result = await updateFood(
+            { id: ctx.actor.id, name: ctx.actor.name },
+            parsedInput,
+        );
+
+        if (result.ok) {
+            refreshInventory({ foods: true, foodHistory: true, templates: true });
         }
 
         return result;

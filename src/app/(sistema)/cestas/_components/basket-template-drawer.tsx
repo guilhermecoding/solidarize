@@ -5,9 +5,7 @@ import { useForm, useStore } from "@tanstack/react-form";
 import { useAction } from "next-safe-action/hooks";
 import {
     Delete02Icon,
-    Edit03Icon,
     GridViewIcon,
-    InboxIcon,
     Package01Icon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -23,6 +21,7 @@ import {
     emptyBasketTemplateFormValues,
     type BasketTemplateFormValues,
 } from "@/app/(sistema)/cestas/schema";
+import SeparatorSection from "@/components/separator-section";
 import { ResultDialog } from "@/components/shared/result-dialog";
 import { SystemDialog } from "@/components/shared/system-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -47,40 +46,41 @@ import {
 } from "@/components/ui/drawer";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { BasketTemplateRecord } from "@/services/basket/basket.type";
 import type { FoodOptionRecord } from "@/services/food/food.type";
 
 type BasketTemplateDrawerProps = {
     open: boolean;
-    templates: BasketTemplateRecord[];
+    template: BasketTemplateRecord | null;
     foods: FoodOptionRecord[];
     onOpenChange: (open: boolean) => void;
-    onChanged: (message: string) => void;
+    onSaved: (message: string) => void;
 };
 
 /**
- * Dialog/Drawer para cadastrar, editar e gerenciar modelos de cesta.
+ * Dialog/Drawer para cadastrar, editar ou excluir um modelo de cesta.
  */
 export function BasketTemplateDrawer({
     open,
-    templates,
+    template,
     foods,
     onOpenChange,
-    onChanged,
+    onSaved,
 }: BasketTemplateDrawerProps) {
     const isMobile = useIsMobile();
-    const title = "Modelos de Cesta";
-    const description = "Defina padrões pré-configurados de cestas com alimentos vinculados.";
+    const title = template ? "Editar Modelo de Cesta" : "Novo Modelo de Cesta";
+    const description = template
+        ? "Atualize o nome ou os alimentos vinculados a este modelo."
+        : "Defina um padrão pré-configurado de cesta com alimentos vinculados.";
 
     const body = (
-        <TemplateManager
-            key={open ? "templates-open" : "templates-closed"}
-            templates={templates}
+        <TemplateForm
+            key={template?.id ?? (open ? "new-template-open" : "new-template-closed")}
+            template={template}
             foods={foods}
             surface={isMobile ? "drawer" : "dialog"}
-            onChanged={onChanged}
+            onSaved={onSaved}
         />
     );
 
@@ -124,237 +124,60 @@ export function BasketTemplateDrawer({
     );
 }
 
-function TemplateManager({
-    templates,
+function TemplateForm({
+    template,
     foods,
     surface,
-    onChanged,
+    onSaved,
 }: {
-    templates: BasketTemplateRecord[];
+    template: BasketTemplateRecord | null;
     foods: FoodOptionRecord[];
     surface: "drawer" | "dialog";
-    onChanged: (message: string) => void;
+    onSaved: (message: string) => void;
 }) {
-    const [tab, setTab] = useState<"form" | "list">("form");
-    const [editing, setEditing] = useState<BasketTemplateRecord | null>(null);
-    const [deleting, setDeleting] = useState<BasketTemplateRecord | null>(null);
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
-
-    const { executeAsync: deleteTemplate, isPending: isDeleting } = useAction(deleteBasketTemplateAction);
 
     const availableFoodIds = new Set(foods.map((food) => food.id));
 
-    return (
-        <>
-            <Tabs
-                value={tab}
-                onValueChange={(nextTab) => {
-                    if (nextTab === "form" || nextTab === "list") {
-                        setTab(nextTab);
-                    }
-                }}
-                className="flex min-h-0 flex-1 flex-col gap-0"
-            >
-                <div className={surface === "dialog" ? "shrink-0 px-6 pt-4" : "shrink-0 px-4 pt-3"}>
-                    <TabsList>
-                        <TabsTrigger value="form">
-                            {editing ? "Editar modelo" : "Novo modelo"}
-                        </TabsTrigger>
-                        <TabsTrigger value="list">
-                            Cadastrados ({templates.length})
-                        </TabsTrigger>
-                    </TabsList>
-                </div>
-
-                <TabsContent value="form" className="flex min-h-0 flex-1 flex-col">
-                    <TemplateForm
-                        key={editing?.id ?? "new-template"}
-                        editing={editing}
-                        foods={foods}
-                        availableFoodIds={availableFoodIds}
-                        surface={surface}
-                        onCancelEdit={() => setEditing(null)}
-                        onError={setSaveError}
-                        onSaved={onChanged}
-                    />
-                </TabsContent>
-
-                <TabsContent
-                    value="list"
-                    className={
-                        surface === "dialog"
-                            ? "min-h-0 flex-1 overflow-y-auto px-6 py-4"
-                            : "min-h-0 flex-1 overflow-y-auto px-4 py-4"
-                    }
-                >
-                    {templates.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border bg-muted/20 py-14 text-center text-muted-foreground">
-                            <HugeiconsIcon icon={InboxIcon} strokeWidth={2} className="size-9" />
-                            <p className="text-sm font-medium">Nenhum modelo de cesta cadastrado</p>
-                        </div>
-                    ) : (
-                        <ul className="flex flex-col gap-3">
-                            {templates.map((template) => (
-                                <li
-                                    key={template.id}
-                                    className="flex items-center justify-between gap-4 rounded-2xl border bg-card p-4"
-                                >
-                                    <div className="min-w-0 flex-1">
-                                        <p className="truncate font-semibold">{template.name}</p>
-                                        <p className="mt-0.5 text-xs text-muted-foreground">
-                                            {template.foodCount}{" "}
-                                            {template.foodCount === 1 ? "alimento" : "alimentos"} ·{" "}
-                                            {template.createdByName}
-                                        </p>
-                                    </div>
-                                    <div className="flex shrink-0 items-center gap-1">
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon-sm"
-                                            aria-label={`Editar modelo ${template.name}`}
-                                            onClick={() => {
-                                                setEditing(template);
-                                                setTab("form");
-                                            }}
-                                        >
-                                            <HugeiconsIcon icon={Edit03Icon} strokeWidth={2} className="size-4" />
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon-sm"
-                                            className="text-destructive hover:text-destructive"
-                                            aria-label={`Excluir modelo ${template.name}`}
-                                            onClick={() => setDeleting(template)}
-                                        >
-                                            <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-4" />
-                                        </Button>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </TabsContent>
-            </Tabs>
-
-            <SystemDialog
-                open={deleting !== null}
-                onOpenChange={(nextOpen) => {
-                    if (!nextOpen) {
-                        setDeleting(null);
-                    }
-                }}
-                variant="destructive"
-                title="Excluir modelo de cesta?"
-                description="Confirme a exclusão do modelo selecionado."
-                actions={
-                    <>
-                        <DialogClose render={<Button type="button" variant="outline" disabled={isDeleting} />}>
-                            Cancelar
-                        </DialogClose>
-                        <Button
-                            type="button"
-                            variant="destructive"
-                            loading={isDeleting}
-                            loadingText="Excluindo"
-                            onClick={async () => {
-                                if (!deleting) {
-                                    return;
-                                }
-
-                                const result = await deleteTemplate({ id: deleting.id });
-                                setDeleting(null);
-
-                                if (result.serverError) {
-                                    setSaveError(result.serverError);
-                                    return;
-                                }
-
-                                if (!result.data?.ok) {
-                                    setSaveError(result.data?.message ?? "Não foi possível excluir o modelo.");
-                                    return;
-                                }
-
-                                onChanged(result.data.message ?? "Modelo de cesta excluído com sucesso.");
-                            }}
-                        >
-                            Excluir
-                        </Button>
-                    </>
-                }
-            >
-                <p className="text-sm text-muted-foreground">
-                    O modelo <strong>{deleting?.name}</strong> será removido. Cestas já criadas com ele serão preservadas.
-                </p>
-            </SystemDialog>
-
-            <ResultDialog
-                status="warning"
-                open={saveError !== null}
-                onOpenChange={(nextOpen) => {
-                    if (!nextOpen) {
-                        setSaveError(null);
-                    }
-                }}
-                title="Não foi possível concluir"
-                subtitle={saveError ?? ""}
-            />
-        </>
-    );
-}
-
-function TemplateForm({
-    editing,
-    foods,
-    availableFoodIds,
-    surface,
-    onCancelEdit,
-    onError,
-    onSaved,
-}: {
-    editing: BasketTemplateRecord | null;
-    foods: FoodOptionRecord[];
-    availableFoodIds: ReadonlySet<string>;
-    surface: "drawer" | "dialog";
-    onCancelEdit: () => void;
-    onError: (message: string) => void;
-    onSaved: (message: string) => void;
-}) {
     const { execute: createTemplate, isPending: isCreating } = useAction(createBasketTemplateAction, {
         onSuccess: ({ data }) => {
             if (!data.ok) {
-                onError(data.message);
+                setSaveError(data.message);
                 return;
             }
 
             onSaved(data.message ?? "Modelo de cesta cadastrado com sucesso.");
         },
         onError: ({ error }) => {
-            onError(error.serverError ?? "Não foi possível cadastrar o modelo.");
+            setSaveError(error.serverError ?? "Não foi possível cadastrar o modelo.");
         },
     });
 
     const { execute: updateTemplate, isPending: isUpdating } = useAction(updateBasketTemplateAction, {
         onSuccess: ({ data }) => {
             if (!data.ok) {
-                onError(data.message);
+                setSaveError(data.message);
                 return;
             }
 
             onSaved(data.message ?? "Modelo de cesta atualizado com sucesso.");
         },
         onError: ({ error }) => {
-            onError(error.serverError ?? "Não foi possível atualizar o modelo.");
+            setSaveError(error.serverError ?? "Não foi possível atualizar o modelo.");
         },
     });
 
-    const isPending = isCreating || isUpdating;
+    const { executeAsync: deleteTemplate, isPending: isDeleting } = useAction(
+        deleteBasketTemplateAction,
+    );
 
-    const initialValues: BasketTemplateFormValues = editing
+    const isPending = isCreating || isUpdating || isDeleting;
+
+    const initialValues: BasketTemplateFormValues = template
         ? {
-            name: editing.name,
-            foodIds: editing.foodIds.filter((id) => availableFoodIds.has(id)),
+            name: template.name,
+            foodIds: template.foodIds.filter((id) => availableFoodIds.has(id)),
         }
         : emptyBasketTemplateFormValues;
 
@@ -364,8 +187,8 @@ function TemplateForm({
             onSubmit: basketTemplateSchema,
         },
         onSubmit: ({ value }) => {
-            if (editing) {
-                updateTemplate({ id: editing.id, ...value });
+            if (template) {
+                updateTemplate({ id: template.id, ...value });
                 return;
             }
 
@@ -403,21 +226,9 @@ function TemplateForm({
 
                             return (
                                 <Field data-invalid={invalid || undefined}>
-                                    <div className="flex items-center justify-between gap-2">
-                                        <div className="flex items-center gap-2">
-                                            <HugeiconsIcon icon={GridViewIcon} strokeWidth={2} className="size-4" />
-                                            <FieldLabel htmlFor={field.name} required>Nome do modelo</FieldLabel>
-                                        </div>
-                                        {editing ? (
-                                            <Button
-                                                type="button"
-                                                variant="ghost"
-                                                size="xs"
-                                                onClick={onCancelEdit}
-                                            >
-                                                Voltar para novo modelo
-                                            </Button>
-                                        ) : null}
+                                    <div className="flex items-center gap-2">
+                                        <HugeiconsIcon icon={GridViewIcon} strokeWidth={2} className="size-4" />
+                                        <FieldLabel htmlFor={field.name} required>Nome do modelo</FieldLabel>
                                     </div>
                                     <Input
                                         id={field.name}
@@ -474,6 +285,24 @@ function TemplateForm({
                             );
                         }}
                     </form.Field>
+
+                    {template ? (
+                        <>
+                            <SeparatorSection title="Zona de Perigo" />
+                            <div>
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    className="font-bold"
+                                    disabled={isPending}
+                                    onClick={() => setConfirmDeleteOpen(true)}
+                                >
+                                    <HugeiconsIcon icon={Delete02Icon} strokeWidth={2.5} className="size-5" />
+                                    Excluir Modelo
+                                </Button>
+                            </div>
+                        </>
+                    ) : null}
                 </FieldGroup>
             </form>
 
@@ -485,7 +314,7 @@ function TemplateForm({
                     <Button
                         type="submit"
                         form="template-form"
-                        loading={isPending}
+                        loading={isCreating || isUpdating}
                         loadingText="Salvando"
                     >
                         Prosseguir
@@ -496,7 +325,7 @@ function TemplateForm({
                     <Button
                         type="submit"
                         form="template-form"
-                        loading={isPending}
+                        loading={isCreating || isUpdating}
                         loadingText="Salvando"
                     >
                         Prosseguir
@@ -506,6 +335,65 @@ function TemplateForm({
                     </DrawerClose>
                 </DrawerFooter>
             )}
+
+            <SystemDialog
+                open={confirmDeleteOpen}
+                onOpenChange={setConfirmDeleteOpen}
+                variant="destructive"
+                title="Excluir modelo de cesta?"
+                description="Confirme a exclusão do modelo selecionado."
+                actions={
+                    <>
+                        <DialogClose render={<Button type="button" variant="outline" disabled={isDeleting} />}>
+                            Cancelar
+                        </DialogClose>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            loading={isDeleting}
+                            loadingText="Excluindo"
+                            onClick={async () => {
+                                if (!template) {
+                                    return;
+                                }
+
+                                const result = await deleteTemplate({ id: template.id });
+                                setConfirmDeleteOpen(false);
+
+                                if (result.serverError) {
+                                    setSaveError(result.serverError);
+                                    return;
+                                }
+
+                                if (!result.data?.ok) {
+                                    setSaveError(result.data?.message ?? "Não foi possível excluir o modelo.");
+                                    return;
+                                }
+
+                                onSaved(result.data.message ?? "Modelo de cesta excluído com sucesso.");
+                            }}
+                        >
+                            Excluir
+                        </Button>
+                    </>
+                }
+            >
+                <p className="text-sm text-muted-foreground">
+                    O modelo <strong>{template?.name}</strong> será removido. Cestas já criadas com ele serão preservadas.
+                </p>
+            </SystemDialog>
+
+            <ResultDialog
+                status="warning"
+                open={saveError !== null}
+                onOpenChange={(nextOpen) => {
+                    if (!nextOpen) {
+                        setSaveError(null);
+                    }
+                }}
+                title="Não foi possível concluir"
+                subtitle={saveError ?? ""}
+            />
         </>
     );
 }

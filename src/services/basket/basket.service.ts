@@ -25,7 +25,12 @@ import type {
     UpdateBasketInput,
     UpdateBasketTemplateInput,
 } from "@/services/basket/basket.type";
-import type { HistoryPage, InventoryActor } from "@/services/food/food.type";
+import {
+    foodTypeLabels,
+    isFoodType,
+    type HistoryPage,
+    type InventoryActor,
+} from "@/services/food/food.type";
 
 export const BASKET_CACHE_TAG = "baskets";
 export const BASKET_TEMPLATE_CACHE_TAG = "basket-templates";
@@ -52,7 +57,21 @@ export async function listBasketTemplates(): Promise<BasketTemplateRecord[]> {
         orderBy: { name: "asc" },
         include: {
             foods: {
-                select: { foodId: true },
+                include: {
+                    food: {
+                        select: {
+                            id: true,
+                            label: true,
+                            type: true,
+                            batch: true,
+                        },
+                    },
+                },
+                orderBy: {
+                    food: {
+                        label: "asc",
+                    },
+                },
             },
         },
     });
@@ -61,9 +80,20 @@ export async function listBasketTemplates(): Promise<BasketTemplateRecord[]> {
         id: row.id,
         name: row.name,
         foodIds: row.foods.map((item) => item.foodId),
+        foods: row.foods.map((item) => {
+            const type = isFoodType(item.food.type) ? item.food.type : "arroz";
+
+            return {
+                id: item.food.id,
+                label: item.food.label,
+                typeLabel: foodTypeLabels[type],
+                batch: item.food.batch,
+            };
+        }),
         foodCount: row.foods.length,
         createdByName: row.createdByName,
         createdAtLabel: formatDateTimeBr(row.createdAt),
+        createdAtDateLabel: formatDateBr(row.createdAt),
     }));
 }
 
