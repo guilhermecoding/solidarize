@@ -29,7 +29,7 @@ export const basketModules: ModuleGroup = {
     items: [
         {
             id: "nova-cesta",
-            title: "Nova Cesta",
+            title: "Novas Cestas",
             description: "Monte e registre uma nova cesta com base em itens avulsos ou modelos pré-definidos.",
             actionLabel: "Novo cadastro",
             href: "/cestas/nova",
