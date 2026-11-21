@@ -17,6 +17,7 @@ import {
     parseBrazilianDateInput,
 } from "@/lib/date-br";
 import prisma from "@/lib/prisma";
+import { verifyAdminPassword } from "@/lib/verify-admin-password";
 import {
     foodTypeLabels,
     isFoodType,
@@ -168,7 +169,7 @@ export async function listFoodHistoryPage({
 
             return {
                 id: row.id,
-                type: row.type === "out" ? "out" : "in",
+                type: toHistoryType(row.type),
                 title: row.description,
                 subtitle: `#${row.foodBatch}`,
                 createdAtLabel: formatDateTimeBr(row.createdAt),
@@ -355,6 +356,70 @@ export async function updateFood(
     }
 
     return serverSuccess(undefined, "Alimento atualizado com sucesso.");
+}
+
+/**
+ * Exclui um alimento após confirmar a senha de administrador, desvinculando-o das cestas e registrando no histórico.
+ */
+export async function deleteFood(
+    actor: InventoryActor,
+    id: string,
+    password: string,
+): Promise<ServerResponse> {
+    const authCheck = await verifyAdminPassword(password);
+
+    if (!authCheck.ok) {
+        return authCheck;
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+        const current = await tx.food.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                label: true,
+                batch: true,
+                quantity: true,
+            },
+        });
+
+        if (!current) {
+            return { type: "missing" as const };
+        }
+
+        await tx.foodHistory.create({
+            data: {
+                foodId: null,
+                foodLabel: current.label,
+                foodBatch: current.batch,
+                type: "delete",
+                quantity: current.quantity,
+                description: `Alimento ${current.label} excluído`,
+                createdById: actor.id,
+                createdByName: actor.name,
+            },
+        });
+
+        await tx.food.delete({
+            where: { id },
+        });
+
+        return { type: "ok" as const };
+    });
+
+    if (result.type === "missing") {
+        return serverFailure("Alimento não encontrado.");
+    }
+
+    return serverSuccess(undefined, "Alimento excluído com sucesso.");
+}
+
+function toHistoryType(value: string): "in" | "out" | "delete" {
+    if (value === "out" || value === "delete") {
+        return value;
+    }
+
+    return "in";
 }
 
 function toFoodRecord(

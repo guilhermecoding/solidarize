@@ -50,8 +50,23 @@ export const updateBasketTemplateSchema = basketTemplateSchema.extend({
     id: z.string().trim().min(1, "Modelo inválido."),
 });
 
+const adminPasswordSchema = z
+    .string()
+    .min(8, "A senha deve ter pelo menos 8 caracteres.");
+
 export const deleteBasketTemplateSchema = z.object({
     id: z.string().trim().min(1, "Modelo inválido."),
+    password: adminPasswordSchema,
+});
+
+export const deleteBasketSchema = z.object({
+    id: z.string().trim().min(1, "Cesta inválida."),
+    password: adminPasswordSchema,
+});
+
+export const deleteFoodSchema = z.object({
+    id: z.string().trim().min(1, "Alimento inválido."),
+    password: adminPasswordSchema,
 });
 
 export const createFoodSchema = z.object({

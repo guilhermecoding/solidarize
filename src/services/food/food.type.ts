@@ -110,7 +110,7 @@ export type FoodListPage = {
 
 export type HistoryItemRecord = {
     id: string;
-    type: "in" | "out";
+    type: "in" | "out" | "delete";
     title: string;
     subtitle: string;
     createdAtLabel: string;

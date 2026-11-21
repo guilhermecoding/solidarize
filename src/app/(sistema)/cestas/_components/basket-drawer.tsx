@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useAction } from "next-safe-action/hooks";
 import {
+    Delete03Icon,
     GridViewIcon,
     Layers01Icon,
     Package01Icon,
@@ -13,6 +14,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 import {
     createBasketAction,
+    deleteBasketAction,
     getNextBasketNameAction,
     updateBasketAction,
 } from "@/app/(sistema)/cestas/action";
@@ -24,7 +26,10 @@ import {
     updateBasketSchema,
     type CreateBasketFormValues,
 } from "@/app/(sistema)/cestas/schema";
+import SeparatorSection from "@/components/separator-section";
+import { AdminPasswordDialog } from "@/components/shared/admin-password-dialog";
 import { ResultDialog } from "@/components/shared/result-dialog";
+import { SystemDialog } from "@/components/shared/system-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -157,9 +162,13 @@ function BasketForm({
     onSaved: (message: string) => void;
 }) {
     const [generatedName, setGeneratedName] = useState(nextBasketName);
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [passwordOpen, setPasswordOpen] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [pendingEmptyFoodsValue, setPendingEmptyFoodsValue] =
         useState<CreateBasketFormValues | null>(null);
+
+    const { executeAsync: deleteBasket } = useAction(deleteBasketAction);
 
     useEffect(() => {
         if (!open || basket) {
@@ -181,8 +190,17 @@ function BasketForm({
 
     const availableFoodIds = new Set(foods.map((food) => food.id));
     const previouslySelectedIds = basket ? new Set(basket.foodIds) : undefined;
+    const hasDeletedTemplate = Boolean(basket && !basket.templateId && basket.deletedTemplateName);
 
     const templateOptions = [
+        ...(hasDeletedTemplate && basket?.deletedTemplateName
+            ? [
+                {
+                    value: "deleted-template",
+                    label: `Modelo '${basket.deletedTemplateName}' apagado`,
+                },
+            ]
+            : []),
         { value: "new", label: "Nova" },
         ...templates.map((template) => ({
             value: template.id,
@@ -222,7 +240,7 @@ function BasketForm({
 
     const initialValues: CreateBasketFormValues = basket
         ? {
-            templateId: basket.templateId ?? "new",
+            templateId: basket.templateId ?? (hasDeletedTemplate ? "deleted-template" : "new"),
             quantity: basket.quantity,
             foodIds: basket.foodIds.filter((id) => availableFoodIds.has(id)),
         }
@@ -277,6 +295,10 @@ function BasketForm({
         }
 
         form.setFieldValue("templateId", nextTemplateId);
+
+        if (nextTemplateId === "deleted-template") {
+            return;
+        }
 
         if (nextTemplateId === "new") {
             form.setFieldValue("foodIds", []);
@@ -429,6 +451,24 @@ function BasketForm({
                             </Field>
                         )}
                     </form.Field>
+
+                    {basket ? (
+                        <>
+                            <SeparatorSection title="Zona de Perigo" />
+                            <div>
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    className={surface === "drawer" ? "w-full font-bold" : "font-bold"}
+                                    disabled={isPending}
+                                    onClick={() => setConfirmDeleteOpen(true)}
+                                >
+                                    <HugeiconsIcon icon={Delete03Icon} strokeWidth={2.5} className="size-5" />
+                                    Excluir Cesta
+                                </Button>
+                            </div>
+                        </>
+                    ) : null}
                 </FieldGroup>
             </form>
 
@@ -495,6 +535,68 @@ function BasketForm({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <SystemDialog
+                open={confirmDeleteOpen}
+                onOpenChange={setConfirmDeleteOpen}
+                variant="destructive"
+                title="Excluir cesta?"
+                description="Confirme a exclusão da cesta selecionada."
+                actions={
+                    <>
+                        <DialogClose render={<Button type="button" variant="outline" />}>
+                            Cancelar
+                        </DialogClose>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => {
+                                setConfirmDeleteOpen(false);
+                                setPasswordOpen(true);
+                            }}
+                        >
+                            Confirmar
+                        </Button>
+                    </>
+                }
+            >
+                <p className="text-sm text-muted-foreground">
+                    A cesta <strong>{basket?.name}</strong> será removida permanentemente do sistema.
+                </p>
+            </SystemDialog>
+
+            <AdminPasswordDialog
+                open={passwordOpen}
+                onOpenChange={setPasswordOpen}
+                onConfirm={async (password) => {
+                    if (!basket) {
+                        return { ok: false, message: "Cesta inválida." };
+                    }
+
+                    const result = await deleteBasket({ id: basket.id, password });
+
+                    if (result.serverError) {
+                        return { ok: false, message: result.serverError };
+                    }
+
+                    if (result.validationErrors) {
+                        return { ok: false, message: "A senha deve ter pelo menos 8 caracteres." };
+                    }
+
+                    if (!result.data?.ok) {
+                        return {
+                            ok: false,
+                            message: result.data?.message ?? "Não foi possível excluir a cesta.",
+                        };
+                    }
+
+                    return { ok: true };
+                }}
+                onSuccess={() => {
+                    setPasswordOpen(false);
+                    onSaved("Cesta excluída com sucesso.");
+                }}
+            />
 
             <ResultDialog
                 status="warning"

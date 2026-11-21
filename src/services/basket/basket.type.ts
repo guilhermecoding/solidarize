@@ -22,6 +22,7 @@ export type BasketRecord = {
     quantity: number;
     templateId: string | null;
     templateName: string | null;
+    deletedTemplateName: string | null;
     foodIds: string[];
     foodCount: number;
     createdByName: string;

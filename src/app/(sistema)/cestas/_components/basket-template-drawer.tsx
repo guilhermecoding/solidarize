@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useAction } from "next-safe-action/hooks";
 import {
-    Delete02Icon,
+    Delete03Icon,
     GridViewIcon,
     Package01Icon,
 } from "@hugeicons/core-free-icons";
@@ -22,6 +22,7 @@ import {
     type BasketTemplateFormValues,
 } from "@/app/(sistema)/cestas/schema";
 import SeparatorSection from "@/components/separator-section";
+import { AdminPasswordDialog } from "@/components/shared/admin-password-dialog";
 import { ResultDialog } from "@/components/shared/result-dialog";
 import { SystemDialog } from "@/components/shared/system-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -136,6 +137,7 @@ function TemplateForm({
     onSaved: (message: string) => void;
 }) {
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [passwordOpen, setPasswordOpen] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
 
     const availableFoodIds = new Set(foods.map((food) => food.id));
@@ -293,11 +295,11 @@ function TemplateForm({
                                 <Button
                                     type="button"
                                     variant="destructive"
-                                    className="font-bold"
+                                    className={surface === "drawer" ? "w-full font-bold" : "font-bold"}
                                     disabled={isPending}
                                     onClick={() => setConfirmDeleteOpen(true)}
                                 >
-                                    <HugeiconsIcon icon={Delete02Icon} strokeWidth={2.5} className="size-5" />
+                                    <HugeiconsIcon icon={Delete03Icon} strokeWidth={2.5} className="size-5" />
                                     Excluir Modelo
                                 </Button>
                             </div>
@@ -344,44 +346,59 @@ function TemplateForm({
                 description="Confirme a exclusão do modelo selecionado."
                 actions={
                     <>
-                        <DialogClose render={<Button type="button" variant="outline" disabled={isDeleting} />}>
+                        <DialogClose render={<Button type="button" variant="outline" />}>
                             Cancelar
                         </DialogClose>
                         <Button
                             type="button"
                             variant="destructive"
-                            loading={isDeleting}
-                            loadingText="Excluindo"
-                            onClick={async () => {
-                                if (!template) {
-                                    return;
-                                }
-
-                                const result = await deleteTemplate({ id: template.id });
+                            onClick={() => {
                                 setConfirmDeleteOpen(false);
-
-                                if (result.serverError) {
-                                    setSaveError(result.serverError);
-                                    return;
-                                }
-
-                                if (!result.data?.ok) {
-                                    setSaveError(result.data?.message ?? "Não foi possível excluir o modelo.");
-                                    return;
-                                }
-
-                                onSaved(result.data.message ?? "Modelo de cesta excluído com sucesso.");
+                                setPasswordOpen(true);
                             }}
                         >
-                            Excluir
+                            Confirmar
                         </Button>
                     </>
                 }
             >
                 <p className="text-sm text-muted-foreground">
-                    O modelo <strong>{template?.name}</strong> será removido. Cestas já criadas com ele serão preservadas.
+                    O modelo <strong>{template?.name}</strong> será removido. Cestas vinculadas passarão a exibir <strong>Modelo &apos;{template?.name}&apos; apagado</strong>.
                 </p>
             </SystemDialog>
+
+            <AdminPasswordDialog
+                open={passwordOpen}
+                onOpenChange={setPasswordOpen}
+                onConfirm={async (password) => {
+                    if (!template) {
+                        return { ok: false, message: "Modelo inválido." };
+                    }
+
+                    const result = await deleteTemplate({ id: template.id, password });
+
+                    if (result.serverError) {
+                        return { ok: false, message: result.serverError };
+                    }
+
+                    if (result.validationErrors) {
+                        return { ok: false, message: "A senha deve ter pelo menos 8 caracteres." };
+                    }
+
+                    if (!result.data?.ok) {
+                        return {
+                            ok: false,
+                            message: result.data?.message ?? "Não foi possível excluir o modelo.",
+                        };
+                    }
+
+                    return { ok: true };
+                }}
+                onSuccess={() => {
+                    setPasswordOpen(false);
+                    onSaved("Modelo de cesta excluído com sucesso.");
+                }}
+            />
 
             <ResultDialog
                 status="warning"

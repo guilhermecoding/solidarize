@@ -6,6 +6,7 @@ import { useAction } from "next-safe-action/hooks";
 import {
     BarCode01Icon,
     Calendar03Icon,
+    Delete03Icon,
     Layers01Icon,
     Package01Icon,
     Store01Icon,
@@ -13,7 +14,11 @@ import {
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
-import { createFoodAction, updateFoodAction } from "@/app/(sistema)/cestas/action";
+import {
+    createFoodAction,
+    deleteFoodAction,
+    updateFoodAction,
+} from "@/app/(sistema)/cestas/action";
 import { QuantityStepper } from "@/app/(sistema)/cestas/_components/quantity-stepper";
 import {
     createFoodSchema,
@@ -21,7 +26,10 @@ import {
     emptyCreateFoodFormValues,
     type CreateFoodFormValues,
 } from "@/app/(sistema)/cestas/schema";
+import SeparatorSection from "@/components/separator-section";
+import { AdminPasswordDialog } from "@/components/shared/admin-password-dialog";
 import { ResultDialog } from "@/components/shared/result-dialog";
+import { SystemDialog } from "@/components/shared/system-dialog";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -148,7 +156,11 @@ function FoodForm({
     surface: "drawer" | "dialog";
     onSaved: (message: string) => void;
 }) {
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [passwordOpen, setPasswordOpen] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+
+    const { executeAsync: deleteFood } = useAction(deleteFoodAction);
 
     const { execute: createFood, isPending: isCreating } = useAction(createFoodAction, {
         onSuccess: ({ data }) => {
@@ -455,6 +467,24 @@ function FoodForm({
                             </FieldDescription>
                         </Field>
                     </div>
+
+                    {food ? (
+                        <>
+                            <SeparatorSection title="Zona de Perigo" />
+                            <div>
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    className={surface === "drawer" ? "w-full font-bold" : "font-bold"}
+                                    disabled={isPending}
+                                    onClick={() => setConfirmDeleteOpen(true)}
+                                >
+                                    <HugeiconsIcon icon={Delete03Icon} strokeWidth={2.5} className="size-5" />
+                                    Excluir Alimento
+                                </Button>
+                            </div>
+                        </>
+                    ) : null}
                 </FieldGroup>
             </form>
 
@@ -487,6 +517,68 @@ function FoodForm({
                     </DrawerClose>
                 </DrawerFooter>
             )}
+
+            <SystemDialog
+                open={confirmDeleteOpen}
+                onOpenChange={setConfirmDeleteOpen}
+                variant="destructive"
+                title="Excluir alimento?"
+                description="Confirme a exclusão do alimento selecionado."
+                actions={
+                    <>
+                        <DialogClose render={<Button type="button" variant="outline" />}>
+                            Cancelar
+                        </DialogClose>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => {
+                                setConfirmDeleteOpen(false);
+                                setPasswordOpen(true);
+                            }}
+                        >
+                            Confirmar
+                        </Button>
+                    </>
+                }
+            >
+                <p className="text-sm text-muted-foreground">
+                    O alimento <strong>{food?.label}</strong> (#{food?.batch}) será removido e desvinculado de todas as cestas e modelos.
+                </p>
+            </SystemDialog>
+
+            <AdminPasswordDialog
+                open={passwordOpen}
+                onOpenChange={setPasswordOpen}
+                onConfirm={async (password) => {
+                    if (!food) {
+                        return { ok: false, message: "Alimento inválido." };
+                    }
+
+                    const result = await deleteFood({ id: food.id, password });
+
+                    if (result.serverError) {
+                        return { ok: false, message: result.serverError };
+                    }
+
+                    if (result.validationErrors) {
+                        return { ok: false, message: "A senha deve ter pelo menos 8 caracteres." };
+                    }
+
+                    if (!result.data?.ok) {
+                        return {
+                            ok: false,
+                            message: result.data?.message ?? "Não foi possível excluir o alimento.",
+                        };
+                    }
+
+                    return { ok: true };
+                }}
+                onSuccess={() => {
+                    setPasswordOpen(false);
+                    onSaved("Alimento excluído com sucesso.");
+                }}
+            />
 
             <ResultDialog
                 status="warning"

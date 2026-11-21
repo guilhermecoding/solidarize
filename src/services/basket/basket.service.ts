@@ -17,6 +17,7 @@ import {
     getHistoryDayGroup,
 } from "@/lib/date-br";
 import prisma from "@/lib/prisma";
+import { verifyAdminPassword } from "@/lib/verify-admin-password";
 import type {
     BasketRecord,
     BasketTemplateRecord,
@@ -250,21 +251,62 @@ export async function updateBasketTemplate(
 }
 
 /**
- * Exclui um modelo de cesta cadastrado.
+ * Exclui um modelo de cesta após confirmar a senha de administrador, preservando o nome apagado nas cestas vinculadas.
  */
-export async function deleteBasketTemplate(id: string): Promise<ServerResponse> {
-    const current = await prisma.basketTemplate.findUnique({
-        where: { id },
-        select: { id: true },
-    });
+export async function deleteBasketTemplate(
+    actor: InventoryActor,
+    id: string,
+    password: string,
+): Promise<ServerResponse> {
+    const authCheck = await verifyAdminPassword(password);
 
-    if (!current) {
-        return serverFailure("Modelo de cesta não encontrado.");
+    if (!authCheck.ok) {
+        return authCheck;
     }
 
-    await prisma.basketTemplate.delete({
-        where: { id },
+    const result = await prisma.$transaction(async (tx) => {
+        const current = await tx.basketTemplate.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                name: true,
+            },
+        });
+
+        if (!current) {
+            return { type: "missing" as const };
+        }
+
+        await tx.basket.updateMany({
+            where: { templateId: id },
+            data: {
+                templateId: null,
+                deletedTemplateName: current.name,
+            },
+        });
+
+        await tx.basketHistory.create({
+            data: {
+                basketId: null,
+                basketName: current.name,
+                type: "delete",
+                quantity: 0,
+                description: `Modelo '${current.name}' excluído`,
+                createdById: actor.id,
+                createdByName: actor.name,
+            },
+        });
+
+        await tx.basketTemplate.delete({
+            where: { id },
+        });
+
+        return { type: "ok" as const };
     });
+
+    if (result.type === "missing") {
+        return serverFailure("Modelo de cesta não encontrado.");
+    }
 
     return serverSuccess(undefined, "Modelo de cesta excluído com sucesso.");
 }
@@ -324,6 +366,7 @@ export async function listBaskets(): Promise<BasketRecord[]> {
         quantity: row.quantity,
         templateId: row.templateId,
         templateName: row.template?.name ?? null,
+        deletedTemplateName: row.deletedTemplateName ?? null,
         foodIds: row.foods.map((item) => item.foodId),
         foodCount: row.foods.length,
         createdByName: row.createdByName,
@@ -440,7 +483,11 @@ export async function updateBasket(
     }
 
     const { id, quantity } = parsed.data;
-    const templateId = parsed.data.templateId === "new" ? null : parsed.data.templateId;
+    const keepDeletedTemplate = parsed.data.templateId === "deleted-template";
+    const templateId =
+        keepDeletedTemplate || parsed.data.templateId === "new"
+            ? null
+            : parsed.data.templateId;
     const nextFoodIds = deduplicateIds(parsed.data.foodIds);
 
     try {
@@ -500,6 +547,7 @@ export async function updateBasket(
                 data: {
                     quantity,
                     templateId,
+                    ...(keepDeletedTemplate ? {} : { deletedTemplateName: null }),
                 },
             });
 
@@ -556,6 +604,60 @@ export async function updateBasket(
 }
 
 /**
+ * Exclui uma cesta após confirmar a senha de administrador e registra a exclusão no histórico.
+ */
+export async function deleteBasket(
+    actor: InventoryActor,
+    id: string,
+    password: string,
+): Promise<ServerResponse> {
+    const authCheck = await verifyAdminPassword(password);
+
+    if (!authCheck.ok) {
+        return authCheck;
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+        const current = await tx.basket.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                name: true,
+                quantity: true,
+            },
+        });
+
+        if (!current) {
+            return { type: "missing" as const };
+        }
+
+        await tx.basketHistory.create({
+            data: {
+                basketId: null,
+                basketName: current.name,
+                type: "delete",
+                quantity: current.quantity,
+                description: `Cesta ${current.name} excluída`,
+                createdById: actor.id,
+                createdByName: actor.name,
+            },
+        });
+
+        await tx.basket.delete({
+            where: { id },
+        });
+
+        return { type: "ok" as const };
+    });
+
+    if (result.type === "missing") {
+        return serverFailure("Cesta não encontrada.");
+    }
+
+    return serverSuccess(undefined, "Cesta excluída com sucesso.");
+}
+
+/**
  * Lista o histórico paginado de entradas e saídas de cestas (10 por página).
  */
 export async function listBasketHistoryPage({
@@ -587,7 +689,7 @@ export async function listBasketHistoryPage({
 
             return {
                 id: row.id,
-                type: row.type === "out" ? "out" : "in",
+                type: toHistoryType(row.type),
                 title: row.description,
                 subtitle: row.basketName,
                 createdAtLabel: formatDateTimeBr(row.createdAt),
@@ -708,4 +810,12 @@ function formatBasketOutDescription(quantity: number): string {
 
 function isUniqueError(error: unknown): boolean {
     return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
+
+function toHistoryType(value: string): "in" | "out" | "delete" {
+    if (value === "out" || value === "delete") {
+        return value;
+    }
+
+    return "in";
 }

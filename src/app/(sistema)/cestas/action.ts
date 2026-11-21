@@ -6,7 +6,9 @@ import {
     basketTemplateSchema,
     createBasketSchema,
     createFoodSchema,
+    deleteBasketSchema,
     deleteBasketTemplateSchema,
+    deleteFoodSchema,
     updateBasketSchema,
     updateBasketTemplateSchema,
     updateFoodSchema,
@@ -18,6 +20,7 @@ import {
     BASKET_TEMPLATE_CACHE_TAG,
     createBasket,
     createBasketTemplate,
+    deleteBasket,
     deleteBasketTemplate,
     getFreshNextBasketName,
     updateBasket,
@@ -27,6 +30,7 @@ import {
     FOOD_CACHE_TAG,
     FOOD_HISTORY_CACHE_TAG,
     createFood,
+    deleteFood,
     updateFood,
 } from "@/services/food/food.service";
 
@@ -117,6 +121,25 @@ export const updateBasketAction = inventoryWriteActionClient
         return result;
     });
 
+export const deleteBasketAction = inventoryWriteActionClient
+    .inputSchema(deleteBasketSchema)
+    .action(async ({ parsedInput, ctx }) => {
+        const result = await deleteBasket(
+            { id: ctx.actor.id, name: ctx.actor.name },
+            parsedInput.id,
+            parsedInput.password,
+        );
+
+        if (result.ok) {
+            refreshInventory({
+                baskets: true,
+                basketHistory: true,
+            });
+        }
+
+        return result;
+    });
+
 export const createBasketTemplateAction = inventoryWriteActionClient
     .inputSchema(basketTemplateSchema)
     .action(async ({ parsedInput, ctx }) => {
@@ -146,11 +169,19 @@ export const updateBasketTemplateAction = inventoryWriteActionClient
 
 export const deleteBasketTemplateAction = inventoryWriteActionClient
     .inputSchema(deleteBasketTemplateSchema)
-    .action(async ({ parsedInput }) => {
-        const result = await deleteBasketTemplate(parsedInput.id);
+    .action(async ({ parsedInput, ctx }) => {
+        const result = await deleteBasketTemplate(
+            { id: ctx.actor.id, name: ctx.actor.name },
+            parsedInput.id,
+            parsedInput.password,
+        );
 
         if (result.ok) {
-            refreshInventory({ templates: true, baskets: true });
+            refreshInventory({
+                templates: true,
+                baskets: true,
+                basketHistory: true,
+            });
         }
 
         return result;
@@ -181,6 +212,27 @@ export const updateFoodAction = inventoryWriteActionClient
 
         if (result.ok) {
             refreshInventory({ foods: true, foodHistory: true, templates: true });
+        }
+
+        return result;
+    });
+
+export const deleteFoodAction = inventoryWriteActionClient
+    .inputSchema(deleteFoodSchema)
+    .action(async ({ parsedInput, ctx }) => {
+        const result = await deleteFood(
+            { id: ctx.actor.id, name: ctx.actor.name },
+            parsedInput.id,
+            parsedInput.password,
+        );
+
+        if (result.ok) {
+            refreshInventory({
+                foods: true,
+                foodHistory: true,
+                baskets: true,
+                templates: true,
+            });
         }
 
         return result;

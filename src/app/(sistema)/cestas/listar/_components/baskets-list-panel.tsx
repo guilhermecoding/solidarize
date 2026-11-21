@@ -152,6 +152,15 @@ function BasketGroupSection({
                                     <h3 className="truncate text-base font-semibold tracking-tight">
                                         {basket.name}
                                     </h3>
+                                    {basket.deletedTemplateName ? (
+                                        <p className="truncate text-xs text-muted-foreground italic">
+                                            Modelo &apos;{basket.deletedTemplateName}&apos; apagado
+                                        </p>
+                                    ) : basket.templateName ? (
+                                        <p className="truncate text-xs text-muted-foreground">
+                                            {basket.templateName}
+                                        </p>
+                                    ) : null}
                                     <p className="text-xs text-muted-foreground">
                                         Criada em {basket.createdAtDateLabel}
                                     </p>

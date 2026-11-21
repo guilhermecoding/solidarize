@@ -286,8 +286,9 @@ model Basket {
   id            String          @id @default(uuid())
   name          String          @unique
   quantity      Int             @default(1)
-  templateId    String?
-  template      BasketTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  templateId          String?
+  template            BasketTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  deletedTemplateName String?
   createdById   String?
   createdBy     User?           @relation("BasketCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
   createdByName String

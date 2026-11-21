@@ -5,6 +5,7 @@ import {
     ArrowLeft01Icon,
     ArrowRight01Icon,
     Clock01Icon,
+    Delete03Icon,
     ShoppingBasketCheckIn03Icon,
     ShoppingBasketCheckOut03Icon,
 } from "@hugeicons/core-free-icons";
@@ -68,8 +69,13 @@ export function HistoryFeed({
                         </div>
                         <ul className="flex flex-col gap-3">
                             {group.items.map((item) => {
+                                const isDelete = item.type === "delete";
                                 const isEntry = item.type === "in";
-                                const icon = isEntry ? inIcon : outIcon;
+                                const icon = isDelete
+                                    ? Delete03Icon
+                                    : isEntry
+                                        ? inIcon
+                                        : outIcon;
 
                                 return (
                                     <li key={item.id}>
@@ -77,7 +83,11 @@ export function HistoryFeed({
                                             <span
                                                 className={cn(
                                                     "flex size-10 shrink-0 items-center justify-center rounded-full text-white",
-                                                    isEntry ? "bg-emerald-600" : "bg-red-600",
+                                                    isDelete
+                                                        ? "bg-zinc-500 dark:bg-zinc-600"
+                                                        : isEntry
+                                                            ? "bg-emerald-600"
+                                                            : "bg-red-600",
                                                 )}
                                             >
                                                 <HugeiconsIcon
