@@ -1,4 +1,4 @@
-import { Home04Icon, ServiceIcon, ShoppingBasket03Icon, UsersRoundIcon } from "@hugeicons/core-free-icons";
+import { Home04Icon, ServiceIcon, ShoppingBasket03Icon, UserMultiple02Icon, UsersRoundIcon } from "@hugeicons/core-free-icons";
 import { IconSvgElement } from "@hugeicons/react";
 
 export type NavManagementItem = {
@@ -21,7 +21,7 @@ export const navManagement: NavManagementItem[] = [
     {
         name: "Membros",
         url: "/membros",
-        icon: UsersRoundIcon,
+        icon: UserMultiple02Icon,
     },
     {
         name: "Cestas e Alimentos",
