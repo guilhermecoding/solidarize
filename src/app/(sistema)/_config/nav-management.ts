@@ -1,4 +1,4 @@
-import { Home04Icon, ServiceIcon, ShoppingBasket03Icon, UserMultiple02Icon, UsersRoundIcon } from "@hugeicons/core-free-icons";
+import { Home04Icon, ServiceIcon, ShoppingBasket03Icon, UserMultiple02Icon } from "@hugeicons/core-free-icons";
 import { IconSvgElement } from "@hugeicons/react";
 
 export type NavManagementItem = {

@@ -21,6 +21,7 @@ import {
 function refreshBeneficiaries(id?: string) {
     updateTag(BENEFICIARY_CACHE_TAG);
     revalidatePath("/beneficiarios");
+    revalidatePath("/cestas");
 
     if (id) {
         revalidatePath(`/beneficiarios/${id}`);

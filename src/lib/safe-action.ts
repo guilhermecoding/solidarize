@@ -24,7 +24,11 @@ export const actionClient = createSafeActionClient({
     },
 });
 
-async function getActor(): Promise<MemberActor | null> {
+export type SessionActor = MemberActor & {
+    name: string;
+};
+
+async function getActor(): Promise<SessionActor | null> {
     const session = await auth.api.getSession({
         headers: await headers(),
     });
@@ -35,6 +39,7 @@ async function getActor(): Promise<MemberActor | null> {
 
     return {
         id: session.user.id,
+        name: session.user.name,
         role: session.user.role,
         permission: session.user.permission,
     };
@@ -77,6 +82,22 @@ export const beneficiaryReadActionClient = authActionClient.use(async ({ next, c
 export const beneficiaryWriteActionClient = authActionClient.use(async ({ next, ctx }) => {
     if (!hasWriteAccess(ctx.actor)) {
         throw new ActionError("Você não tem permissão para alterar beneficiários.");
+    }
+
+    return next();
+});
+
+export const inventoryReadActionClient = authActionClient.use(async ({ next, ctx }) => {
+    if (!hasReadAccess(ctx.actor)) {
+        throw new ActionError("Você não tem permissão para consultar cestas e alimentos.");
+    }
+
+    return next();
+});
+
+export const inventoryWriteActionClient = authActionClient.use(async ({ next, ctx }) => {
+    if (!hasWriteAccess(ctx.actor)) {
+        throw new ActionError("Você não tem permissão para alterar cestas e alimentos.");
     }
 
     return next();
