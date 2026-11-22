@@ -1,8 +1,10 @@
 import {
+    HealtcareIcon,
     Home04Icon,
     PieChartIcon,
     ServiceIcon,
     ShoppingBasket03Icon,
+    ShoppingBasketFavorite03Icon,
     UserMultiple02Icon,
 } from "@hugeicons/core-free-icons";
 
@@ -52,4 +54,21 @@ export const navManagement: NavSectionGroup[] = [
             },
         ],
     },
+    {
+        label: "MEMBRO",
+        items: [
+            {
+                name: "Minhas Famílias",
+                url: "/familias",
+                icon: HealtcareIcon,
+                requiresReadAccess: true,
+            },
+            {
+                name: "Cestas de Alimentação",
+                url: "/cestas-alimentacao",
+                icon: ShoppingBasketFavorite03Icon,
+                requiresReadAccess: true,
+            },
+        ],
+    }
 ];
