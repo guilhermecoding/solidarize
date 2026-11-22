@@ -5,6 +5,25 @@ import TitlePage from "@/components/title-page";
 import { getCurrentUser } from "@/lib/current-user";
 import { getBrazilDateParts } from "@/lib/date-br";
 
+const solidarityPhrases = [
+    "O bem te espera.",
+    "Solidariedade transforma o dia.",
+    "Um gesto de cuidado muda tudo.",
+    "Juntos, o bem chega mais longe.",
+    "Cada ajuda conta.",
+    "Cuidar do outro é cuidar do mundo.",
+    "A solidariedade começa perto.",
+    "O bem cresce quando é compartilhado.",
+    "Ninguém se salva sozinho.",
+    "Pequenos gestos, grandes cuidados.",
+] as const;
+
+function getSolidarityPhrase(): string {
+    const index = Math.floor(Math.random() * solidarityPhrases.length);
+
+    return solidarityPhrases[index] ?? solidarityPhrases[0];
+}
+
 function getGreeting(hour: number): string {
     if (hour >= 5 && hour < 12) {
         return "Bom dia";
@@ -27,6 +46,7 @@ export async function GreetingSection() {
         <Section className="mt-2">
             <TitlePage
                 title={`${getGreeting(hour)}, ${firstName}!`}
+                description={getSolidarityPhrase()}
             />
         </Section>
     );
