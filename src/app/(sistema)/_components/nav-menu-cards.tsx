@@ -22,11 +22,11 @@ export function NavMenuCardsGrid({ items }: { items: NavSectionItem[] }) {
             {items.map((item) => (
                 <li key={`${item.name}-${item.url}`}>
                     <Link href={item.url} className={cardClassName}>
-                        <span className="flex size-10 items-center justify-center rounded-xl bg-muted">
+                        <span className="flex size-14 items-center justify-center rounded-2xl bg-muted">
                             <HugeiconsIcon
                                 icon={item.icon}
                                 strokeWidth={2}
-                                className="size-5"
+                                className="size-7"
                             />
                         </span>
                         <h3 className="mt-5 text-lg font-semibold">
