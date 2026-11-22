@@ -1,14 +1,9 @@
-import Link from "next/link";
-import { HugeiconsIcon } from "@hugeicons/react";
-
+import { NavMenuCardsGrid } from "@/app/(sistema)/_components/nav-menu-cards";
 import { navManagement } from "@/app/(sistema)/_config/nav-management";
 import Section from "@/components/shared/section";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser } from "@/lib/current-user";
 import { hasReadAccess } from "@/lib/member-access";
-
-const cardClassName =
-    "group flex h-full flex-col rounded-2xl border bg-card p-5 text-card-foreground transition-all outline-none hover:border-foreground/20 hover:shadow-sm focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 /**
  * Esqueleto de carregamento das seções de atalhos da página inicial.
@@ -79,24 +74,7 @@ export async function HomeMenusSection() {
                             </header>
                         ) : null}
 
-                        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {section.items.map((item) => (
-                                <li key={`${item.name}-${item.url}`}>
-                                    <Link href={item.url} className={cardClassName}>
-                                        <span className="flex size-14 items-center justify-center rounded-xl bg-muted">
-                                            <HugeiconsIcon
-                                                icon={item.icon}
-                                                strokeWidth={2}
-                                                className="size-7"
-                                            />
-                                        </span>
-                                        <h3 className="mt-5 text-lg font-semibold">
-                                            {item.name}
-                                        </h3>
-                                    </Link>
-                                </li>
-                            ))}
-                        </ul>
+                        <NavMenuCardsGrid items={section.items} />
                     </Section>
                 );
             })}

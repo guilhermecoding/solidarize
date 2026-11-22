@@ -9,6 +9,8 @@ import {
 import Page from "@/components/shared/page";
 import Section from "@/components/shared/section";
 import { Skeleton } from "@/components/ui/skeleton";
+import IconLogo from "@/components/logo/icon-logo";
+import TextLogo from "@/components/logo/text-logo";
 
 export const metadata: Metadata = {
     title: "Início",
@@ -25,6 +27,10 @@ function HomeSkeleton() {
 export default function HomePage() {
     return (
         <Page>
+            <Section className="flex md:hidden justify-center items-center gap-2 mb-4">
+                <IconLogo className="size-7" />
+                <TextLogo className="text-lg" />
+            </Section>
             <Suspense fallback={<HomeSkeleton />}>
                 <GreetingSection />
             </Suspense>

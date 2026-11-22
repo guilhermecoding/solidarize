@@ -8,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ComputerIcon, Moon02Icon, Sun01Icon } from "@hugeicons/core-free-icons";
 
@@ -21,8 +22,14 @@ type ThemeValue = keyof typeof THEME_ITEMS;
 
 export function ThemeSelect({
   onOpenChange,
+  side = "right",
+  align = "center",
+  contentClassName,
 }: {
   onOpenChange?: (open: boolean) => void;
+  side?: "top" | "right" | "bottom" | "left";
+  align?: "start" | "center" | "end";
+  contentClassName?: string;
 }) {
   const { theme, setTheme } = useTheme();
   const value = (theme ?? "system") as ThemeValue;
@@ -45,11 +52,11 @@ export function ThemeSelect({
         <SelectValue />
       </SelectTrigger>
       <SelectContent
-        align="center"
-        side="right"
+        align={align}
+        side={side}
         sideOffset={8}
         alignItemWithTrigger={false}
-        className="z-60 min-w-36"
+        className={cn("z-60 min-w-36", contentClassName)}
       >
         <SelectItem value="light">
           <HugeiconsIcon icon={Sun01Icon} strokeWidth={2} className="pointer-events-none size-4 text-muted-foreground mt-0.5" />
