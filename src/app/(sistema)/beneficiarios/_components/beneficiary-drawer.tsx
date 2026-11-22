@@ -43,6 +43,8 @@ import {
 } from "@/components/ui/drawer";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
     Select,
     SelectContent,
@@ -65,6 +67,8 @@ import {
     beneficiaryStatusLabels,
     beneficiaryStatuses,
     brazilianStates,
+    disabilityLabels,
+    disabilityOptions,
     employmentLabels,
     employments,
     isKinshipAllowed,
@@ -72,6 +76,8 @@ import {
     kinshipOptionsForGender,
     maritalStatusLabels,
     maritalStatuses,
+    rentLabels,
+    rentOptions,
     type BeneficiaryAssistantRecord,
     type BeneficiaryRecord,
 } from "@/services/beneficiary/beneficiary.type";
@@ -779,7 +785,7 @@ function BeneficiaryForm({
                                     )}
                                 </form.Field>
                             </div>
-                            <SeparatorSection title="Trabalho e assistência" />
+                            <SeparatorSection title="Trabalho" />
                             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <form.Field name="employment">
                                     {(field) => (
@@ -817,6 +823,40 @@ function BeneficiaryForm({
                                         )}
                                     </form.Field>
                                 ) : null}
+                            </div>
+                            <SeparatorSection title="Condições" />
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                <form.Field name="disability">
+                                    {(field) => (
+                                        <RadioChoiceField
+                                            field={field}
+                                            label="Deficiência"
+                                            attempts={submissionAttempts}
+                                            required
+                                            options={disabilityOptions.map((option) => ({
+                                                value: option,
+                                                label: disabilityLabels[option],
+                                            }))}
+                                        />
+                                    )}
+                                </form.Field>
+                                <form.Field name="rent">
+                                    {(field) => (
+                                        <RadioChoiceField
+                                            field={field}
+                                            label="Aluguel"
+                                            attempts={submissionAttempts}
+                                            required
+                                            options={rentOptions.map((option) => ({
+                                                value: option,
+                                                label: rentLabels[option],
+                                            }))}
+                                        />
+                                    )}
+                                </form.Field>
+                            </div>
+                            <SeparatorSection title="Assistência" />
+                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                 <form.Field name="status">
                                     {(field) => (
                                         <ChoiceField
@@ -1313,6 +1353,36 @@ function FamilyMemberFields({
                     )}
                 </form.Field>
             </div>
+            <SeparatorSection title="Condições" />
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <form.Field name={`members[${index}].disability`}>
+                    {(field) => (
+                        <RadioChoiceField
+                            field={field}
+                            label="Deficiência"
+                            attempts={attempts}
+                            options={optionalOptions(disabilityOptions.map((option) => ({
+                                value: option,
+                                label: disabilityLabels[option],
+                            })))}
+                        />
+                    )}
+                </form.Field>
+                <form.Field name={`members[${index}].rent`}>
+                    {(field) => (
+                        <RadioChoiceField
+                            field={field}
+                            label="Aluguel"
+                            attempts={attempts}
+                            options={optionalOptions(rentOptions.map((option) => ({
+                                value: option,
+                                label: rentLabels[option],
+                            })))}
+                        />
+                    )}
+                </form.Field>
+            </div>
+            <SeparatorSection title="Assistência" />
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <form.Field name={`members[${index}].status`}>
                     {(field) => (
@@ -1482,6 +1552,55 @@ function ChoiceField({
     );
 }
 
+function RadioChoiceField({
+    field,
+    label,
+    attempts,
+    options,
+    required = false,
+}: {
+    field: TextFieldApi;
+    label: string;
+    attempts: number;
+    options: Array<{ value: string; label: string }>;
+    required?: boolean;
+}) {
+    const errors = visibleErrors(field, attempts);
+    const invalid = errors.length > 0;
+
+    return (
+        <Field data-invalid={invalid || undefined}>
+            <FieldLabel required={required}>{label}</FieldLabel>
+            <RadioGroup
+                value={field.state.value}
+                onValueChange={(value) => field.handleChange(typeof value === "string" ? value : "")}
+                aria-required={required || undefined}
+                aria-invalid={invalid || undefined}
+                className="flex flex-wrap items-center gap-6 pt-1"
+            >
+                {options.map((option) => {
+                    const id = `${field.name}-${option.value}`;
+
+                    return (
+                        <div key={option.value} className="flex items-center gap-2">
+                            <RadioGroupItem
+                                id={id}
+                                value={option.value}
+                                aria-invalid={invalid || undefined}
+                                onBlur={field.handleBlur}
+                            />
+                            <Label htmlFor={id} className="cursor-pointer font-normal">
+                                {option.label}
+                            </Label>
+                        </div>
+                    );
+                })}
+            </RadioGroup>
+            <FieldError errors={errors} />
+        </Field>
+    );
+}
+
 function ArrayFieldError({
     field,
     attempts,
@@ -1606,6 +1725,8 @@ function toFormValues(beneficiary: BeneficiaryRecord): BeneficiaryFormValues {
         notes: beneficiary.notes,
         status: beneficiary.status,
         aidType: beneficiary.aidType,
+        disability: beneficiary.disability,
+        rent: beneficiary.rent,
         members: beneficiary.members.map((member) => ({
             id: member.id,
             name: member.name,
@@ -1625,6 +1746,8 @@ function toFormValues(beneficiary: BeneficiaryRecord): BeneficiaryFormValues {
             notes: member.notes,
             status: member.status,
             aidType: member.aidType,
+            disability: member.disability,
+            rent: member.rent,
         })),
         assistantIds: beneficiary.assistants.map((assistant) => assistant.id),
     };

@@ -13,8 +13,10 @@ import {
     aidTypeLabels,
     beneficiaryGenderLabels,
     beneficiaryStatusLabels,
+    disabilityLabels,
     employmentLabels,
     maritalStatusLabels,
+    rentLabels,
     type BeneficiaryRecord,
 } from "@/services/beneficiary/beneficiary.type";
 
@@ -172,6 +174,8 @@ function titularRows(
             value: beneficiaryStatusLabels[beneficiary.status],
         },
         { label: "Tipo de Auxílio", value: aidTypeLabels[beneficiary.aidType] },
+        { label: "Deficiência", value: disabilityLabels[beneficiary.disability] },
+        { label: "Aluguel", value: rentLabels[beneficiary.rent] },
         { label: "Observações", value: text(beneficiary.notes) },
     ];
 }

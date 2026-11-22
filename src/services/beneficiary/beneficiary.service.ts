@@ -18,9 +18,11 @@ import {
     isBeneficiaryGender,
     isBeneficiaryStatus,
     isBrazilianState,
+    isDisabilityOption,
     isEmployment,
     isKinship,
     isMaritalStatus,
+    isRentOption,
     kinshipLabel,
     cpfTakenMessage,
     CPF_TAKEN_MESSAGE,
@@ -30,10 +32,12 @@ import {
     type BeneficiaryOptionRecord,
     type BeneficiaryRecord,
     type BeneficiaryStatus,
+    type DisabilityOption,
     type Employment,
     type FamilyMemberRecord,
     type Kinship,
     type MaritalStatus,
+    type RentOption,
     type UpdateBeneficiaryInput,
 } from "@/services/beneficiary/beneficiary.type";
 
@@ -88,6 +92,8 @@ type PreparedMember = {
     notes: string | null;
     status: BeneficiaryStatus | null;
     aidType: AidType | null;
+    disability: DisabilityOption | null;
+    rent: RentOption | null;
     contacts: PreparedContact[];
 };
 
@@ -108,6 +114,8 @@ type PreparedBeneficiary = {
     notes: string | null;
     status: BeneficiaryStatus;
     aidType: AidType;
+    disability: DisabilityOption;
+    rent: RentOption;
     contacts: PreparedContact[];
     members: PreparedMember[];
     assistantIds: string[];
@@ -503,8 +511,10 @@ function prepareBeneficiary(input: BeneficiaryInput): PreparedBeneficiary | Serv
     const employment = isEmployment(value.employment) ? value.employment : null;
     const status = isBeneficiaryStatus(value.status) ? value.status : null;
     const aidType = isAidType(value.aidType) ? value.aidType : null;
+    const disability = isDisabilityOption(value.disability) ? value.disability : null;
+    const rent = isRentOption(value.rent) ? value.rent : null;
 
-    if (!dateOfBirth || !gender || !maritalStatus || !employment || !status || !aidType || !isBrazilianState(value.state)) {
+    if (!dateOfBirth || !gender || !maritalStatus || !employment || !status || !aidType || !disability || !rent || !isBrazilianState(value.state)) {
         return serverFailure("Dados inválidos.");
     }
 
@@ -525,6 +535,8 @@ function prepareBeneficiary(input: BeneficiaryInput): PreparedBeneficiary | Serv
         notes: emptyToNull(value.notes),
         status,
         aidType,
+        disability,
+        rent,
         contacts: toContacts(value.contacts),
         members: [],
         assistantIds: value.assistantIds,
@@ -561,6 +573,8 @@ function prepareBeneficiary(input: BeneficiaryInput): PreparedBeneficiary | Serv
             notes: emptyToNull(member.notes),
             status: isBeneficiaryStatus(member.status) ? member.status : null,
             aidType: isAidType(member.aidType) ? member.aidType : null,
+            disability: isDisabilityOption(member.disability) ? member.disability : null,
+            rent: isRentOption(member.rent) ? member.rent : null,
             contacts: toContacts(member.contacts),
         });
     }
@@ -585,6 +599,8 @@ function beneficiaryData(prepared: PreparedBeneficiary) {
         notes: prepared.notes,
         status: prepared.status,
         aidType: prepared.aidType,
+        disability: prepared.disability,
+        rent: prepared.rent,
     };
 }
 
@@ -606,6 +622,8 @@ function memberData(member: PreparedMember) {
         notes: member.notes,
         status: member.status,
         aidType: member.aidType,
+        disability: member.disability,
+        rent: member.rent,
     };
 }
 
@@ -682,6 +700,8 @@ function toBeneficiary(row: BeneficiaryRow): BeneficiaryRecord {
     const employment = isEmployment(row.employment) ? row.employment : "unemployed";
     const status = isBeneficiaryStatus(row.status) ? row.status : "rejected";
     const aidType = isAidType(row.aidType) ? row.aidType : "other";
+    const disability = isDisabilityOption(row.disability) ? row.disability : "no";
+    const rent = isRentOption(row.rent) ? row.rent : "no";
 
     return {
         id: row.id,
@@ -702,6 +722,8 @@ function toBeneficiary(row: BeneficiaryRow): BeneficiaryRecord {
         notes: row.notes ?? "",
         status,
         aidType,
+        disability,
+        rent,
         members: row.members.map((member) => toFamilyMember(member)),
         assistants: row.assistants
             .map((assistant) => ({
@@ -753,6 +775,8 @@ function toFamilyMember(row: FamilyMemberRow): FamilyMemberRecord {
         notes: row.notes ?? "",
         status: row.status ?? "",
         aidType: row.aidType ?? "",
+        disability: row.disability ?? "",
+        rent: row.rent ?? "",
     };
 }
 

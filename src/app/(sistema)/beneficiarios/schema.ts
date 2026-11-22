@@ -8,9 +8,11 @@ import {
     beneficiaryGenders,
     beneficiaryStatuses,
     brazilianStates,
+    disabilityOptions,
     employments,
     isKinshipAllowed,
     maritalStatuses,
+    rentOptions,
     type BeneficiaryInput,
 } from "@/services/beneficiary/beneficiary.type";
 
@@ -96,6 +98,8 @@ export const familyMemberFormSchema = z.object({
     notes: notesSchema,
     status: optionalChoice(beneficiaryStatuses, "Selecione a situação."),
     aidType: optionalChoice(aidTypes, "Selecione o tipo de auxílio."),
+    disability: optionalChoice(disabilityOptions, "Informe se possui deficiência."),
+    rent: optionalChoice(rentOptions, "Informe se paga aluguel."),
 });
 
 export const beneficiaryFormSchema = z.object({
@@ -118,6 +122,8 @@ export const beneficiaryFormSchema = z.object({
     notes: notesSchema,
     status: requiredChoice(beneficiaryStatuses, "Selecione a situação."),
     aidType: requiredChoice(aidTypes, "Selecione o tipo de auxílio."),
+    disability: requiredChoice(disabilityOptions, "Informe se possui deficiência."),
+    rent: requiredChoice(rentOptions, "Informe se paga aluguel."),
     members: z.array(familyMemberFormSchema),
     assistantIds: z.array(z.string().trim().min(1)).superRefine((ids, ctx) => {
         const seen = new Set<string>();
@@ -235,6 +241,8 @@ export const emptyFamilyMemberFormValues: FamilyMemberFormValues = {
     notes: "",
     status: "",
     aidType: "",
+    disability: "",
+    rent: "",
 };
 
 export const emptyBeneficiaryFormValues: BeneficiaryFormValues = {
@@ -254,6 +262,8 @@ export const emptyBeneficiaryFormValues: BeneficiaryFormValues = {
     notes: "",
     status: "",
     aidType: "",
+    disability: "",
+    rent: "",
     members: [],
     assistantIds: [],
 };

@@ -23,6 +23,12 @@ export type BeneficiaryStatus = (typeof beneficiaryStatuses)[number];
 export const aidTypes = ["food_basket", "financial", "medication", "other"] as const;
 export type AidType = (typeof aidTypes)[number];
 
+export const disabilityOptions = ["yes", "no"] as const;
+export type DisabilityOption = (typeof disabilityOptions)[number];
+
+export const rentOptions = ["yes", "no"] as const;
+export type RentOption = (typeof rentOptions)[number];
+
 export const brazilianStates = [
     "AC",
     "AL",
@@ -146,6 +152,16 @@ export const aidTypeLabels: Record<AidType, string> = {
     other: "Outra Ajuda",
 };
 
+export const disabilityLabels: Record<DisabilityOption, string> = {
+    yes: "Possui",
+    no: "Não possui",
+};
+
+export const rentLabels: Record<RentOption, string> = {
+    yes: "Paga",
+    no: "Não paga",
+};
+
 export function isBeneficiaryGender(value: string): value is BeneficiaryGender {
     return beneficiaryGenders.some((gender) => gender === value);
 }
@@ -164,6 +180,14 @@ export function isBeneficiaryStatus(value: string): value is BeneficiaryStatus {
 
 export function isAidType(value: string): value is AidType {
     return aidTypes.some((aidType) => aidType === value);
+}
+
+export function isDisabilityOption(value: string): value is DisabilityOption {
+    return disabilityOptions.some((option) => option === value);
+}
+
+export function isRentOption(value: string): value is RentOption {
+    return rentOptions.some((option) => option === value);
 }
 
 export function isBrazilianState(value: string): value is BrazilianState {
@@ -253,6 +277,8 @@ export type FamilyMemberInput = {
     notes: string;
     status: string;
     aidType: string;
+    disability: string;
+    rent: string;
 };
 
 export type BeneficiaryInput = {
@@ -272,6 +298,8 @@ export type BeneficiaryInput = {
     notes: string;
     status: string;
     aidType: string;
+    disability: string;
+    rent: string;
     members: FamilyMemberInput[];
     assistantIds: string[];
 };
@@ -301,6 +329,8 @@ export type FamilyMemberRecord = {
     notes: string;
     status: string;
     aidType: string;
+    disability: string;
+    rent: string;
 };
 
 export type BeneficiaryAssistantRecord = {
@@ -338,6 +368,8 @@ export type BeneficiaryRecord = {
     notes: string;
     status: BeneficiaryStatus;
     aidType: AidType;
+    disability: DisabilityOption;
+    rent: RentOption;
     members: FamilyMemberRecord[];
     assistants: BeneficiaryAssistantRecord[];
 };

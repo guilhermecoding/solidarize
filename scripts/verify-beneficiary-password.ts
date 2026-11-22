@@ -166,6 +166,8 @@ async function main() {
             employment: "unemployed",
             status: "approved",
             aidType: "food_basket",
+            disability: "no",
+            rent: "no",
             contacts: { create: [{ phone: "11988887777", position: 0 }] },
         },
     });
