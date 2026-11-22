@@ -16,7 +16,7 @@ export const metadata: Metadata = {
  */
 export default function MembroPage() {
     return (
-        <Page>
+        <Page showBack>
             <Suspense fallback={<MobileMenuSkeleton itemCount={2} />}>
                 <MobileMenuSection sectionLabel="MEMBRO" title="Membro" />
             </Suspense>

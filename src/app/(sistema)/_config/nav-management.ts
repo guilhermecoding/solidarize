@@ -1,13 +1,11 @@
 import {
-    DashboardSquare02Icon,
     HealtcareIcon,
     Home04Icon,
+    KanbanIcon,
     PieChartIcon,
     ServiceIcon,
     ShoppingBasket03Icon,
-    ShoppingBasketFavorite03Icon,
-    UserAccountIcon,
-    UserMultiple02Icon,
+    ShoppingBasketFavorite03Icon, UserMultiple02Icon
 } from "@hugeicons/core-free-icons";
 
 import type { NavSectionGroup, NavSectionItem } from "@/components/nav-management";
@@ -29,7 +27,7 @@ export const navPrimary: NavSectionGroup = {
 export const navManagement: NavSectionGroup[] = [
     {
         label: "GESTÃO",
-        icon: DashboardSquare02Icon,
+        icon: KanbanIcon,
         mobileUrl: "/gestao",
         items: [
             {
@@ -60,7 +58,7 @@ export const navManagement: NavSectionGroup[] = [
     },
     {
         label: "MEMBRO",
-        icon: UserAccountIcon,
+        icon: HealtcareIcon,
         mobileUrl: "/membro",
         items: [
             {
