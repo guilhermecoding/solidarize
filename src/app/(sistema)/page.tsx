@@ -28,7 +28,7 @@ export default function HomePage() {
     return (
         <Page>
             <Section className="flex md:hidden justify-center items-center gap-2 mb-4">
-                <IconLogo className="size-6" />
+                <IconLogo className="size-7" />
                 <TextLogo className="text-lg" />
             </Section>
             <Suspense fallback={<HomeSkeleton />}>
