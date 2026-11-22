@@ -67,8 +67,8 @@ export async function HomeMenusSection() {
                         className="flex flex-col gap-5"
                     >
                         {section.label ? (
-                            <header className="flex flex-col gap-1 border-b pb-4">
-                                <h2 id={headingId} className="text-lg font-semibold">
+                            <header className="flex flex-col gap-1 border-b pb-2">
+                                <h2 id={headingId} className="text-sm font-semibold text-muted-foreground">
                                     {section.label}
                                 </h2>
                             </header>
