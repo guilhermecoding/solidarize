@@ -2,6 +2,8 @@ import type { ComponentProps } from "react";
 import { Suspense } from "react";
 import Link from "next/link";
 
+import { navPrimary } from "@/app/(sistema)/_config/nav-management";
+import { NavManagement } from "@/components/nav-management";
 import {
   NavManagementLoader,
   NavManagementSkeleton,
@@ -41,7 +43,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" render={<Link href="/" />} className="flex justify-center" >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 mt-8">
                 <IconLogo className="size-8" />
                 <TextLogo className="text-xl" />
               </div>
@@ -49,8 +51,8 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent>
-        {/* <NavMain items={data.navMain} /> */}
+      <SidebarContent className="mt-12">
+        <NavManagement items={navPrimary} label="" />
         <Suspense fallback={<NavManagementSkeleton />}>
           <NavManagementLoader />
         </Suspense>

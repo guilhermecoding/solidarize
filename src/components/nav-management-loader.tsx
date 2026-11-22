@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getCurrentUser } from "@/lib/current-user";
 import { hasReadAccess } from "@/lib/member-access";
 
-const SKELETON_WIDTHS = ["w-24", "w-32", "w-28", "w-36"] as const;
+const SKELETON_WIDTHS = ["w-32", "w-28", "w-36"] as const;
 
 export function NavManagementSkeleton() {
     return (
@@ -38,6 +38,10 @@ export async function NavManagementLoader() {
     const allowedItems = navManagement.filter(
         (item) => !item.requiresReadAccess || canRead,
     );
+
+    if (allowedItems.length === 0) {
+        return null;
+    }
 
     return <NavManagement items={allowedItems} />;
 }

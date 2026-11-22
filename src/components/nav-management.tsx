@@ -96,14 +96,22 @@ function NavManagementActive({
 
 export function NavManagement({
   items,
+  label = "GESTÃO",
 }: {
   items: NavManagementItem[];
+  label?: string;
 }) {
+  if (items.length === 0) {
+    return null;
+  }
+
   return (
     <SidebarGroup>
-      <SidebarGroupLabel className="px-3 text-[11px] font-semibold tracking-wider text-sidebar-foreground/60">
-        GESTÃO
-      </SidebarGroupLabel>
+      {label ? (
+        <SidebarGroupLabel className="px-3 text-[11px] font-semibold tracking-wider text-sidebar-foreground/60">
+          {label}
+        </SidebarGroupLabel>
+      ) : null}
       <Suspense fallback={<NavManagementList items={items} pathname={null} />}>
         <NavManagementActive items={items} />
       </Suspense>

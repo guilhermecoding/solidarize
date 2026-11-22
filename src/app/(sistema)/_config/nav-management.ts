@@ -8,13 +8,16 @@ export type NavManagementItem = {
     requiresReadAccess?: boolean;
 };
 
-export const navManagement: NavManagementItem[] = [
+export const navPrimary: NavManagementItem[] = [
     {
         name: "Início",
         url: "/",
         icon: Home04Icon,
         requiresReadAccess: false,
     },
+];
+
+export const navManagement: NavManagementItem[] = [
     {
         name: "Beneficiários",
         url: "/beneficiarios",
