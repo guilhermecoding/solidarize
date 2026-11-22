@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Young_Serif, DM_Sans } from "next/font/google";
 import Script from "next/script";
+import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import SplashScreen from "@/components/splash-screen";
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {`(function(){try{var p=location.pathname;if((p==="/entrar"||p.indexOf("/entrar/")===0)&&!localStorage.getItem("theme")){var root=document.documentElement;root.classList.remove("dark");root.classList.add("light");root.style.colorScheme="light"}}catch(e){}})();`}
         </Script>
         <ThemeProvider>
+          <NextTopLoader color="var(--primary)" showSpinner={false} shadow={false} height={3} />
           <SplashScreen />
           {children}
           <Toaster />
