@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 
 import { navPrimary } from "@/app/(sistema)/_config/nav-management";
-import { NavManagement } from "@/components/nav-management";
+import { NavSection } from "@/components/nav-management";
 import {
   NavManagementLoader,
   NavManagementSkeleton,
@@ -52,7 +52,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent className="mt-4">
-        <NavManagement items={navPrimary} label="" />
+        <NavSection section={navPrimary} />
         <Suspense fallback={<NavManagementSkeleton />}>
           <NavManagementLoader />
         </Suspense>

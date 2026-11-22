@@ -1,46 +1,55 @@
-import { Home04Icon, PieChartIcon, ServiceIcon, ShoppingBasket03Icon, UserMultiple02Icon } from "@hugeicons/core-free-icons";
-import { IconSvgElement } from "@hugeicons/react";
+import {
+    Home04Icon,
+    PieChartIcon,
+    ServiceIcon,
+    ShoppingBasket03Icon,
+    UserMultiple02Icon,
+} from "@hugeicons/core-free-icons";
 
-export type NavManagementItem = {
-    name: string;
-    url: string;
-    icon: IconSvgElement;
-    requiresReadAccess?: boolean;
+import type { NavSectionGroup, NavSectionItem } from "@/components/nav-management";
+
+export type NavManagementItem = NavSectionItem;
+export type NavSectionConfig = NavSectionGroup;
+
+export const navPrimary: NavSectionGroup = {
+    items: [
+        {
+            name: "Início",
+            url: "/",
+            icon: Home04Icon,
+            requiresReadAccess: false,
+        },
+    ],
 };
 
-export const navPrimary: NavManagementItem[] = [
+export const navManagement: NavSectionGroup[] = [
     {
-        name: "Início",
-        url: "/",
-        icon: Home04Icon,
-        requiresReadAccess: false,
+        label: "GESTÃO",
+        items: [
+            {
+                name: "Beneficiários",
+                url: "/beneficiarios",
+                icon: ServiceIcon,
+                requiresReadAccess: true,
+            },
+            {
+                name: "Cestas e Alimentos",
+                url: "/cestas",
+                icon: ShoppingBasket03Icon,
+                requiresReadAccess: true,
+            },
+            {
+                name: "Indicadores",
+                url: "/indicadores",
+                icon: PieChartIcon,
+                requiresReadAccess: true,
+            },
+            {
+                name: "Membros",
+                url: "/membros",
+                icon: UserMultiple02Icon,
+                requiresReadAccess: true,
+            },
+        ],
     },
-];
-
-export const navManagement: NavManagementItem[] = [
-    {
-        name: "Beneficiários",
-        url: "/beneficiarios",
-        icon: ServiceIcon,
-        requiresReadAccess: true,
-    },
-    {
-        name: "Cestas e Alimentos",
-        url: "/cestas",
-        icon: ShoppingBasket03Icon,
-        requiresReadAccess: true,
-    },
-    {
-        name: "Indicadores",
-        url: "/indicadores",
-        icon: PieChartIcon,
-        requiresReadAccess: true,
-    },
-    {
-        name: "Membros (Assistentes)",
-        url: "/membros",
-        icon: UserMultiple02Icon,
-        requiresReadAccess: true,
-    }
-
 ];

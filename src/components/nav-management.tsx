@@ -3,9 +3,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HugeiconsIcon } from "@hugeicons/react";
+import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
 
-import { NavManagementItem } from "@/app/(sistema)/_config/nav-management";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -15,6 +14,24 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
+export type NavSectionItem = {
+  name: string;
+  url: string;
+  icon: IconSvgElement;
+  exact?: boolean;
+  requiresReadAccess?: boolean;
+};
+
+export type NavSectionGroup = {
+  label?: string;
+  items: NavSectionItem[];
+};
+
+export type NavSectionProps = {
+  section: NavSectionGroup;
+  className?: string;
+};
+
 function normalizePath(path: string) {
   if (path === "/") {
     return "/";
@@ -23,7 +40,11 @@ function normalizePath(path: string) {
   return path.replace(/\/+$/, "");
 }
 
-function isMenuItemActive(pathname: string | null, itemUrl: string) {
+function isMenuItemActive(
+  pathname: string | null,
+  itemUrl: string,
+  exact = false,
+) {
   if (!pathname || !itemUrl || itemUrl === "#" || itemUrl.startsWith("#")) {
     return false;
   }
@@ -31,18 +52,18 @@ function isMenuItemActive(pathname: string | null, itemUrl: string) {
   const currentPath = normalizePath(pathname);
   const targetPath = normalizePath(itemUrl);
 
-  if (targetPath === "/") {
-    return currentPath === "/";
+  if (exact || targetPath === "/") {
+    return currentPath === targetPath;
   }
 
   return currentPath === targetPath || currentPath.startsWith(`${targetPath}/`);
 }
 
-function NavManagementList({
+function NavSectionList({
   items,
   pathname,
 }: {
-  items: NavManagementItem[];
+  items: NavSectionItem[];
   pathname: string | null;
 }) {
   const { isMobile, setOpenMobile } = useSidebar();
@@ -50,10 +71,10 @@ function NavManagementList({
   return (
     <SidebarMenu className="gap-1.5">
       {items.map((item) => {
-        const active = isMenuItemActive(pathname, item.url);
+        const active = isMenuItemActive(pathname, item.url, item.exact);
 
         return (
-          <SidebarMenuItem key={item.name}>
+          <SidebarMenuItem key={`${item.name}-${item.url}`}>
             <SidebarMenuButton
               isActive={active}
               tooltip={item.name}
@@ -84,37 +105,31 @@ function NavManagementList({
   );
 }
 
-function NavManagementActive({
-  items,
-}: {
-  items: NavManagementItem[];
-}) {
+function NavSectionActive({ items }: { items: NavSectionItem[] }) {
   const pathname = usePathname();
 
-  return <NavManagementList items={items} pathname={pathname} />;
+  return <NavSectionList items={items} pathname={pathname} />;
 }
 
-export function NavManagement({
-  items,
-  label = "GESTÃO",
-}: {
-  items: NavManagementItem[];
-  label?: string;
-}) {
-  if (items.length === 0) {
+export function NavSection({ section, className }: NavSectionProps) {
+  if (section.items.length === 0) {
     return null;
   }
 
   return (
-    <SidebarGroup>
-      {label ? (
+    <SidebarGroup className={className}>
+      {section.label ? (
         <SidebarGroupLabel className="px-3 text-[11px] font-semibold tracking-wider text-sidebar-foreground/60">
-          {label}
+          {section.label}
         </SidebarGroupLabel>
       ) : null}
-      <Suspense fallback={<NavManagementList items={items} pathname={null} />}>
-        <NavManagementActive items={items} />
+      <Suspense fallback={<NavSectionList items={section.items} pathname={null} />}>
+        <NavSectionActive items={section.items} />
       </Suspense>
     </SidebarGroup>
   );
+}
+
+export function NavManagement(props: NavSectionProps) {
+  return <NavSection {...props} />;
 }
