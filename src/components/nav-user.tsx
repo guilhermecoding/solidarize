@@ -234,7 +234,7 @@ export function MobileNavUser({
         className="z-50 min-w-56 rounded-2xl"
         side="top"
         align="end"
-        sideOffset={16}
+        sideOffset={36}
       >
         <NavUserMenuContent
           user={user}

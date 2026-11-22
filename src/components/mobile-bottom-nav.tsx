@@ -10,7 +10,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HugeiconsIcon, type IconSvgElement } from "@hugeicons/react";
-import { UserCircleIcon } from "@hugeicons/core-free-icons";
+import { UserAiIcon } from "@hugeicons/core-free-icons";
 import {
     motion,
     useMotionValue,
@@ -221,7 +221,7 @@ function MobileBottomNavInner({
             kind: "user",
             id: "user",
             label: "Menu do usuário",
-            icon: UserCircleIcon,
+            icon: UserAiIcon,
         },
     ];
 
