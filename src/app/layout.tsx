@@ -3,6 +3,7 @@ import { Young_Serif, DM_Sans } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import SplashScreen from "@/components/splash-screen";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/toast";
 
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {`(function(){try{var p=location.pathname;if((p==="/entrar"||p.indexOf("/entrar/")===0)&&!localStorage.getItem("theme")){var root=document.documentElement;root.classList.remove("dark");root.classList.add("light");root.style.colorScheme="light"}}catch(e){}})();`}
         </Script>
         <ThemeProvider>
+          <SplashScreen />
           {children}
           <Toaster />
         </ThemeProvider>

@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { createSafeActionClient } from "next-safe-action";
 
 import { auth } from "@/lib/auth";
-import { hasReadAccess, hasWriteAccess } from "@/lib/member-access";
+import { hasReadAccess, hasWriteAccess, isUserBanned } from "@/lib/member-access";
 import type { MemberActor } from "@/services/user/user.type";
 
 export class ActionError extends Error {
@@ -33,7 +33,7 @@ async function getActor(): Promise<SessionActor | null> {
         headers: await headers(),
     });
 
-    if (!session?.user) {
+    if (!session?.user || isUserBanned(session.user)) {
         return null;
     }
 

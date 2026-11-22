@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
+import { isUserBanned } from "@/lib/member-access";
 
 export type CurrentUser = {
     id: string;
@@ -23,7 +24,7 @@ export async function getCurrentUser(): Promise<CurrentUser> {
         headers: await headers(),
     });
 
-    if (!session?.user) {
+    if (!session?.user || isUserBanned(session.user)) {
         redirect("/entrar");
     }
 

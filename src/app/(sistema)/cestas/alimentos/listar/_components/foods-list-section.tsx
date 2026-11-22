@@ -17,7 +17,7 @@ export async function FoodsListSection({
     const user = await getCurrentUser();
 
     if (!hasReadAccess(user)) {
-        redirect("/inicio");
+        redirect("/");
     }
 
     const params = await searchParams;

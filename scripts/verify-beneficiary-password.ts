@@ -147,7 +147,7 @@ async function login(cdp: Cdp) {
         setValue("password", ${JSON.stringify(password)});
     })()`);
     await clickExpression(cdp, `document.querySelector('button[type="submit"]')`);
-    await waitFor(cdp, "location.pathname === '/inicio'");
+    await waitFor(cdp, "location.pathname === '/'");
 }
 
 async function main() {

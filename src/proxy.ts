@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
+import { isUserBanned } from "@/lib/member-access";
 
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
@@ -16,16 +17,17 @@ export async function proxy(request: NextRequest) {
     const session = await auth.api.getSession({
         headers: await headers()
     });
+    const hasValidSession = Boolean(session?.user && !isUserBanned(session.user));
 
     if (isLoginRoute) {
-        if (session) {
-            return NextResponse.redirect(new URL("/inicio", request.url));
+        if (hasValidSession) {
+            return NextResponse.redirect(new URL("/", request.url));
         }
 
         return NextResponse.next();
     }
 
-    if (!session) {
+    if (!hasValidSession) {
         return NextResponse.redirect(new URL("/entrar", request.url));
     }
 

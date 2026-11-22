@@ -106,7 +106,7 @@ export function HistoryFeed({
                                                     ) : null}
                                                 </div>
                                                 {item.detail ? (
-                                                    <p className="mt-1 text-xs text-muted-foreground break-words">
+                                                    <p className="mt-1 text-xs text-muted-foreground wrap-break-word">
                                                         {item.detail}
                                                     </p>
                                                 ) : null}
