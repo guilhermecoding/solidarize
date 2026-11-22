@@ -55,47 +55,76 @@ type NavSlot =
         icon: IconSvgElement;
     };
 
-const BAR_HEIGHT = 64;
-const CONTAINER_HEIGHT = 90;
-const CORNER_RADIUS = 22;
-const INNER_PAD = 12;
-const CIRCLE_SIZE = 48;
-const NOTCH_DEPTH = 33;
+const BAR_HEIGHT = 62;
+const TOP_OVERHANG = 27;
+const CONTAINER_HEIGHT = TOP_OVERHANG + BAR_HEIGHT; // 89px
+const CIRCLE_RADIUS = 23;
+const CIRCLE_SIZE = CIRCLE_RADIUS * 2; // 46px
+const NOTCH_GAP = 8;
+const BOWL_RADIUS = CIRCLE_RADIUS + NOTCH_GAP; // 31px
+const CIRCLE_CENTER_Y = -2; // 2px above bar top edge -> 21px dip for circle, 29px dip for bowl
+const CIRCLE_TOP = TOP_OVERHANG + CIRCLE_CENTER_Y - CIRCLE_RADIUS; // 2px
+const DEFAULT_FILLET = 12;
 const DEFAULT_BAR_WIDTH = 344;
 
-function buildNotchedBarPath(
-    width: number,
-    height: number,
-    radius: number,
-    cx: number,
-    notchHalfWidth: number,
-    notchDepth: number,
-): string {
-    const w = Math.max(width, radius * 2 + 40);
-    const r = Math.min(radius, w / 4, height / 2);
-    const safeCx = Math.min(Math.max(cx, r + 18), w - r - 18);
-    const xL = Math.max(r, safeCx - notchHalfWidth);
-    const xR = Math.min(w - r, safeCx + notchHalfWidth);
-    const leftSpan = safeCx - xL;
-    const rightSpan = xR - safeCx;
+function getInnerPad(width: number): number {
+    return Math.min(20, Math.max(14, Math.round(width * 0.055)));
+}
 
-    const c1x = xL + leftSpan * 0.44;
-    const c2x = safeCx - leftSpan * 0.48;
-    const c3x = safeCx + rightSpan * 0.48;
-    const c4x = xR - rightSpan * 0.44;
+function buildNotchedBarPath(width: number, cx: number): string {
+    const w = Math.max(width, 260);
+    const r = Math.min(20, Math.max(14, Math.floor(w * 0.055)));
+    const minDx = Math.sqrt(
+        BOWL_RADIUS * BOWL_RADIUS - CIRCLE_CENTER_Y * CIRCLE_CENTER_Y,
+    );
+    const safeCx = Math.min(
+        Math.max(cx, r + minDx + 1),
+        w - r - minDx - 1,
+    );
+
+    const calcFillet = (available: number) => {
+        const maxRf =
+            (available * available
+                - (BOWL_RADIUS * BOWL_RADIUS
+                    - CIRCLE_CENTER_Y * CIRCLE_CENTER_Y))
+            / (2 * (BOWL_RADIUS + CIRCLE_CENTER_Y));
+        return Math.max(0.5, Math.min(DEFAULT_FILLET, maxRf));
+    };
+
+    const rfL = calcFillet(safeCx - r);
+    const rfR = calcFillet(w - r - safeCx);
+
+    const dxL = Math.sqrt(
+        (BOWL_RADIUS + rfL) ** 2 - (rfL - CIRCLE_CENTER_Y) ** 2,
+    );
+    const dxR = Math.sqrt(
+        (BOWL_RADIUS + rfR) ** 2 - (rfR - CIRCLE_CENTER_Y) ** 2,
+    );
+
+    const xL = Math.max(r, safeCx - dxL);
+    const xR = Math.min(w - r, safeCx + dxR);
+
+    const tL = BOWL_RADIUS / (BOWL_RADIUS + rfL);
+    const tR = BOWL_RADIUS / (BOWL_RADIUS + rfR);
+
+    const txL = safeCx - dxL * tL;
+    const tyL = CIRCLE_CENTER_Y + (rfL - CIRCLE_CENTER_Y) * tL;
+    const txR = safeCx + dxR * tR;
+    const tyR = CIRCLE_CENTER_Y + (rfR - CIRCLE_CENTER_Y) * tR;
 
     return [
         `M 0 ${r}`,
         `Q 0 0 ${r} 0`,
-        `L ${xL} 0`,
-        `C ${c1x} 0 ${c2x} ${notchDepth} ${safeCx} ${notchDepth}`,
-        `C ${c3x} ${notchDepth} ${c4x} 0 ${xR} 0`,
+        `L ${xL.toFixed(2)} 0`,
+        `A ${rfL.toFixed(2)} ${rfL.toFixed(2)} 0 0 1 ${txL.toFixed(2)} ${tyL.toFixed(2)}`,
+        `A ${BOWL_RADIUS} ${BOWL_RADIUS} 0 0 0 ${txR.toFixed(2)} ${tyR.toFixed(2)}`,
+        `A ${rfR.toFixed(2)} ${rfR.toFixed(2)} 0 0 1 ${xR.toFixed(2)} 0`,
         `L ${w - r} 0`,
         `Q ${w} 0 ${w} ${r}`,
-        `L ${w} ${height - r}`,
-        `Q ${w} ${height} ${w - r} ${height}`,
-        `L ${r} ${height}`,
-        `Q 0 ${height} 0 ${height - r}`,
+        `L ${w} ${BAR_HEIGHT - r}`,
+        `Q ${w} ${BAR_HEIGHT} ${w - r} ${BAR_HEIGHT}`,
+        `L ${r} ${BAR_HEIGHT}`,
+        `Q 0 ${BAR_HEIGHT} 0 ${BAR_HEIGHT - r}`,
         "Z",
     ].join(" ");
 }
@@ -146,6 +175,7 @@ function MobileBottomNavInner({
 }: MobileBottomNavProps & { pathname: string | null }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [barWidth, setBarWidth] = useState(DEFAULT_BAR_WIDTH);
+    const widthMv = useMotionValue(DEFAULT_BAR_WIDTH);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const prefersReducedMotion = useReducedMotion();
 
@@ -159,6 +189,7 @@ function MobileBottomNavInner({
         const updateWidth = () => {
             const nextWidth = Math.round(element.getBoundingClientRect().width);
             if (nextWidth > 0) {
+                widthMv.set(nextWidth);
                 setBarWidth(nextWidth);
             }
         };
@@ -169,7 +200,7 @@ function MobileBottomNavInner({
         observer.observe(element);
 
         return () => observer.disconnect();
-    }, []);
+    }, [widthMv]);
 
     const slots: NavSlot[] = [
         {
@@ -198,9 +229,9 @@ function MobileBottomNavInner({
     const activeIndex = userMenuOpen ? slots.length - 1 : routeActiveIndex;
     const activeSlot = slots[activeIndex] ?? slots[0];
 
-    const slotWidth = (barWidth - INNER_PAD * 2) / slots.length;
-    const targetCx = INNER_PAD + (activeIndex + 0.5) * slotWidth;
-    const notchHalfWidth = Math.min(42, Math.max(30, slotWidth * 0.52));
+    const innerPad = getInnerPad(barWidth);
+    const slotWidth = (barWidth - innerPad * 2) / slots.length;
+    const targetCx = innerPad + (activeIndex + 0.5) * slotWidth;
 
     const notchX = useMotionValue(targetCx);
     const smoothX = useSpring(
@@ -220,19 +251,13 @@ function MobileBottomNavInner({
         }
 
         notchX.jump(targetCx);
-    }, [activeIndex, targetCx, notchX]);
+        smoothX.jump(targetCx);
+    }, [activeIndex, targetCx, notchX, smoothX]);
 
-    const pathD = useTransform(smoothX, (x) =>
-        buildNotchedBarPath(
-            barWidth,
-            BAR_HEIGHT,
-            CORNER_RADIUS,
-            x,
-            notchHalfWidth,
-            NOTCH_DEPTH,
-        ),
+    const pathD = useTransform([smoothX, widthMv], ([x, w]: number[]) =>
+        buildNotchedBarPath(w, x),
     );
-    const circleX = useTransform(smoothX, (x) => x - CIRCLE_SIZE / 2);
+    const circleX = useTransform(smoothX, (x) => x - CIRCLE_RADIUS);
 
     return (
         <nav
@@ -249,15 +274,20 @@ function MobileBottomNavInner({
                     height={BAR_HEIGHT}
                     viewBox={`0 0 ${barWidth} ${BAR_HEIGHT}`}
                     aria-hidden="true"
-                    className="absolute inset-x-0 bottom-0 h-16 w-full overflow-visible drop-shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
+                    className="absolute inset-x-0 bottom-0 h-15.5 w-full overflow-visible drop-shadow-[0_10px_24px_rgba(0,0,0,0.18)]"
                 >
                     <motion.path d={pathD} className="fill-primary" />
                 </svg>
 
                 <motion.div
                     aria-hidden="true"
-                    style={{ x: circleX }}
-                    className="pointer-events-none absolute top-[2px] left-0 flex size-12 items-center justify-center rounded-full bg-primary text-background shadow-md"
+                    style={{
+                        x: circleX,
+                        top: CIRCLE_TOP,
+                        width: CIRCLE_SIZE,
+                        height: CIRCLE_SIZE,
+                    }}
+                    className="pointer-events-none absolute left-0 flex items-center justify-center rounded-full bg-primary text-background shadow-sm"
                 >
                     <motion.span
                         key={activeSlot.id}
@@ -276,14 +306,14 @@ function MobileBottomNavInner({
                         <HugeiconsIcon
                             icon={activeSlot.icon}
                             strokeWidth={2}
-                            className="size-[22px]"
+                            className="size-7"
                         />
                     </motion.span>
                 </motion.div>
 
                 <div
-                    className="absolute inset-x-0 bottom-0 flex h-16 items-center"
-                    style={{ paddingInline: `${INNER_PAD}px` }}
+                    className="absolute inset-x-0 bottom-0 flex h-15.5 items-center"
+                    style={{ paddingInline: `${innerPad}px` }}
                 >
                     {slots.map((slot, index) => {
                         const isElevated = index === activeIndex;
@@ -298,7 +328,7 @@ function MobileBottomNavInner({
                                     aria-label={slot.label}
                                     aria-current={isRouteActive ? "page" : undefined}
                                     onClick={() => setUserMenuOpen(false)}
-                                    className="relative flex h-full flex-1 items-center justify-center rounded-xl text-background/65 transition-colors outline-none hover:text-background focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
+                                    className="relative flex h-full flex-1 items-center justify-center rounded-xl text-background transition-colors outline-none hover:text-background focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
                                 >
                                     <span
                                         className={cn(
@@ -311,7 +341,7 @@ function MobileBottomNavInner({
                                         <HugeiconsIcon
                                             icon={slot.icon}
                                             strokeWidth={2}
-                                            className="size-[22px]"
+                                            className="size-8"
                                         />
                                     </span>
                                 </Link>
@@ -328,7 +358,7 @@ function MobileBottomNavInner({
                                     <button
                                         type="button"
                                         aria-label={slot.label}
-                                        className="relative flex h-full flex-1 cursor-pointer items-center justify-center rounded-xl text-background/65 transition-colors outline-none hover:text-background focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
+                                        className="relative flex h-full flex-1 cursor-pointer items-center justify-center rounded-xl text-background transition-colors outline-none hover:text-background focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
                                     >
                                         <span
                                             className={cn(
@@ -341,7 +371,7 @@ function MobileBottomNavInner({
                                             <HugeiconsIcon
                                                 icon={slot.icon}
                                                 strokeWidth={2}
-                                                className="size-[22px]"
+                                                className="size-8"
                                             />
                                         </span>
                                     </button>
