@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 
+import { APP_VERSION } from "@/lib/app-version";
+
 import IconLogo from "./logo/icon-logo";
 import { TextAnimate } from "./ui/text-animate";
 
-const SPLASH_MIN_DURATION_MS = 1400;
-const SPLASH_MAX_WAIT_MS = 3000;
+const SPLASH_MIN_DURATION_MS = 3400;
+const SPLASH_MAX_WAIT_MS = 5000;
 
 const logoEntrance: Variants = {
     hidden: { opacity: 0, scale: 0.72, y: 16, filter: "blur(8px)" },
@@ -108,6 +110,37 @@ export default function SplashScreen() {
                     >
                         Solidarize
                     </TextAnimate>
+                    <motion.footer
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                            delay: 0.45,
+                            duration: 0.4,
+                            ease: [0.22, 1, 0.36, 1],
+                        }}
+                        className="absolute inset-x-0 bottom-[max(2rem,env(safe-area-inset-bottom))] flex flex-col items-center gap-1 px-6 text-center"
+                    >
+                        <p className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
+                            <span>Desenvolvido com</span>
+                            <svg
+                                aria-label="amor"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                                className="size-3.5 shrink-0"
+                            >
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                            </svg>
+                            <span>
+                                por{" "}
+                                <strong className="font-semibold text-foreground/85">
+                                    João Guilherme
+                                </strong>
+                            </span>
+                        </p>
+                        <span className="text-xs text-muted-foreground">
+                            {APP_VERSION}
+                        </span>
+                    </motion.footer>
                 </motion.div>
             ) : null}
         </AnimatePresence>
