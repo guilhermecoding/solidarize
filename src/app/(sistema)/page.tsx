@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 
-import { HomeSection } from "@/app/(sistema)/_components/home-section";
+import { GreetingSection } from "@/app/(sistema)/_components/greeting-section";
 import Page from "@/components/shared/page";
 import Section from "@/components/shared/section";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,7 +22,7 @@ export default function HomePage() {
     return (
         <Page>
             <Suspense fallback={<HomeSkeleton />}>
-                <HomeSection />
+                <GreetingSection />
             </Suspense>
         </Page>
     );

@@ -42,8 +42,8 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link href="/" />} className="flex justify-center" >
-              <div className="flex items-center gap-2 mt-8">
+            <SidebarMenuButton size="lg" render={<Link href="/" />} className="flex justify-center mt-4" >
+              <div className="flex items-center gap-2">
                 <IconLogo className="size-8" />
                 <TextLogo className="text-xl" />
               </div>
@@ -51,7 +51,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent className="mt-12">
+      <SidebarContent className="mt-4">
         <NavManagement items={navPrimary} label="" />
         <Suspense fallback={<NavManagementSkeleton />}>
           <NavManagementLoader />
