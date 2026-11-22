@@ -733,11 +733,15 @@ export async function withdrawBaskets(
             if (data.recipientType === "listed") {
                 const beneficiary = await tx.beneficiary.findUnique({
                     where: { id: data.beneficiaryId },
-                    select: { id: true, name: true },
+                    select: { id: true, name: true, status: true },
                 });
 
                 if (!beneficiary) {
                     throw new InventoryRuleError("O beneficiário selecionado não foi encontrado.");
+                }
+
+                if (beneficiary.status !== "approved") {
+                    throw new InventoryRuleError("Apenas beneficiários aprovados podem ser selecionados.");
                 }
 
                 beneficiaryId = beneficiary.id;

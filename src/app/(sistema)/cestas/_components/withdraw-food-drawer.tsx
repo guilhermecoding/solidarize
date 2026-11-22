@@ -47,30 +47,23 @@ export function WithdrawFoodDrawer({
     onOpenChange,
     onSaved,
 }: WithdrawFoodDrawerProps) {
-    return (
-        <WithdrawFoodFlow
-            key={open ? "withdraw-food-open" : "withdraw-food-closed"}
-            open={open}
-            foods={foods}
-            beneficiaries={beneficiaries}
-            onOpenChange={onOpenChange}
-            onSaved={onSaved}
-        />
-    );
-}
-
-function WithdrawFoodFlow({
-    open,
-    foods,
-    beneficiaries,
-    onOpenChange,
-    onSaved,
-}: WithdrawFoodDrawerProps) {
+    const [prevOpen, setPrevOpen] = useState(open);
     const [step, setStep] = useState<WithdrawStep>(1);
     const [quantities, setQuantities] = useState<Record<string, number>>({});
     const [recipient, setRecipient] = useState<WithdrawRecipientSelection>({ type: "none" });
     const [justification, setJustification] = useState("");
     const [submitError, setSubmitError] = useState<string | null>(null);
+
+    if (open !== prevOpen) {
+        setPrevOpen(open);
+        if (open) {
+            setStep(1);
+            setQuantities({});
+            setRecipient({ type: "none" });
+            setJustification("");
+            setSubmitError(null);
+        }
+    }
 
     const { execute: executeWithdraw, isPending } = useAction(withdrawFoodsAction, {
         onSuccess: ({ data }) => {
@@ -96,7 +89,9 @@ function WithdrawFoodFlow({
     const totalSelectedUnits = selectedItems.reduce((sum, entry) => sum + entry.quantity, 0);
     const selectedBeneficiary =
         recipient.type === "listed"
-            ? beneficiaries.find((item) => item.id === recipient.beneficiaryId) ?? null
+            ? beneficiaries.find(
+                (item) => item.id === recipient.beneficiaryId && item.status === "approved",
+            ) ?? null
             : null;
 
     const canProceedStep1 = foods.length > 0 && selectedItems.length > 0;

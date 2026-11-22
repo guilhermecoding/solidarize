@@ -93,18 +93,20 @@ export function WithdrawBeneficiaryStep({
             >
                 {/* Opção fixa no topo: Beneficiário não listado */}
                 <div className="flex flex-col gap-3">
-                    <button
-                        type="button"
-                        role="radio"
-                        aria-checked={isUnlistedSelected}
-                        disabled={disabled}
-                        onClick={() => onSelect({ type: "unlisted" })}
-                        className={cn(
-                            "relative flex w-full cursor-pointer items-center gap-3 rounded-2xl border bg-card p-4 text-left text-card-foreground transition-all outline-none hover:border-foreground/25 focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-60",
-                            isUnlistedSelected &&
-                                "border-emerald-500/70 bg-emerald-500/5 ring-1 ring-emerald-500/20 dark:bg-emerald-500/10",
-                        )}
-                    >
+                        <button
+                            type="button"
+                            role="radio"
+                            aria-checked={isUnlistedSelected}
+                            disabled={disabled}
+                            onClick={() =>
+                                onSelect(isUnlistedSelected ? { type: "none" } : { type: "unlisted" })
+                            }
+                            className={cn(
+                                "relative flex w-full cursor-pointer items-center gap-3 rounded-2xl border bg-card p-4 text-left text-card-foreground transition-all outline-none hover:border-foreground/25 focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50",
+                                isUnlistedSelected &&
+                                    "border-emerald-500/70 bg-emerald-500/5 ring-1 ring-emerald-500/20 dark:bg-emerald-500/10",
+                            )}
+                        >
                         {isUnlistedSelected ? (
                             <span
                                 aria-hidden="true"
@@ -190,8 +192,11 @@ export function WithdrawBeneficiaryStep({
                     </div>
                 ) : (
                     filteredBeneficiaries.map((beneficiary) => {
+                        const isNotApproved = beneficiary.status !== "approved";
+                        const isCardDisabled = disabled || isNotApproved;
                         const isSelected =
-                            selection.type === "listed"
+                            !isNotApproved
+                            && selection.type === "listed"
                             && selection.beneficiaryId === beneficiary.id;
 
                         return (
@@ -200,12 +205,23 @@ export function WithdrawBeneficiaryStep({
                                 type="button"
                                 role="radio"
                                 aria-checked={isSelected}
-                                disabled={disabled}
-                                onClick={() =>
-                                    onSelect({ type: "listed", beneficiaryId: beneficiary.id })
-                                }
+                                disabled={isCardDisabled}
+                                onClick={() => {
+                                    if (isCardDisabled) {
+                                        return;
+                                    }
+
+                                    onSelect(
+                                        isSelected
+                                            ? { type: "none" }
+                                            : { type: "listed", beneficiaryId: beneficiary.id },
+                                    );
+                                }}
                                 className={cn(
-                                    "relative flex w-full cursor-pointer flex-col gap-2 rounded-2xl border bg-card p-4 text-left text-card-foreground transition-all outline-none hover:border-foreground/25 focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-60 sm:flex-row sm:items-center sm:justify-between",
+                                    "relative flex w-full flex-col gap-2 rounded-2xl border bg-card p-4 text-left text-card-foreground transition-all outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:flex-row sm:items-center sm:justify-between",
+                                    isCardDisabled
+                                        ? "cursor-not-allowed opacity-50"
+                                        : "cursor-pointer hover:border-foreground/25",
                                     isSelected &&
                                         "border-emerald-500/70 bg-emerald-500/5 ring-1 ring-emerald-500/20 dark:bg-emerald-500/10",
                                 )}
