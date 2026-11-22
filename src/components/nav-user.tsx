@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState, type ReactElement } from "react";
 import {
   Avatar,
   AvatarFallback,
@@ -47,17 +47,9 @@ function getInitials(name: string) {
   return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 }
 
-export function NavUser({
-  user,
-}: {
-  user: NavUserInfo;
-}) {
-  const initials = getInitials(user.name);
+function useUserSignOut() {
   const router = useRouter();
-  const { isMobile } = useSidebar();
-  const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
-  const themeSelectOpenRef = useRef(false);
 
   useLayoutEffect(() => {
     return () => {
@@ -88,6 +80,80 @@ export function NavUser({
       setSigningOut(false);
     }
   };
+
+  return { signingOut, handleSignOut };
+}
+
+function NavUserMenuContent({
+  user,
+  signingOut,
+  onSignOut,
+  onThemeSelectOpenChange,
+  themeSide = "right",
+  themeAlign = "center",
+}: {
+  user: NavUserInfo;
+  signingOut: boolean;
+  onSignOut: () => void;
+  onThemeSelectOpenChange: (open: boolean) => void;
+  themeSide?: "top" | "right" | "bottom" | "left";
+  themeAlign?: "start" | "center" | "end";
+}) {
+  const initials = getInitials(user.name);
+
+  return (
+    <>
+      <DropdownMenuGroup>
+        <DropdownMenuLabel className="p-0 font-normal">
+          <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+            <Avatar>
+              {user.avatar ? (
+                <AvatarImage src={user.avatar} alt={user.name} />
+              ) : null}
+              <AvatarFallback>{initials}</AvatarFallback>
+            </Avatar>
+            <div className="grid flex-1 text-left text-sm leading-tight">
+              <span className="truncate font-medium">{user.name}</span>
+              <span className="truncate text-xs">{user.email}</span>
+            </div>
+          </div>
+        </DropdownMenuLabel>
+      </DropdownMenuGroup>
+      <DropdownMenuSeparator />
+      <div className="flex items-center gap-2.5 rounded-xl px-3 py-2">
+        <HugeiconsIcon icon={PaintBoardIcon} strokeWidth={2} className="size-4 shrink-0" />
+        <span className="text-sm">Tema</span>
+        <div className="ml-auto">
+          <ThemeSelect
+            side={themeSide}
+            align={themeAlign}
+            onOpenChange={onThemeSelectOpenChange}
+          />
+        </div>
+      </div>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        disabled={signingOut}
+        onClick={onSignOut}
+        variant="destructive"
+      >
+        <HugeiconsIcon icon={LogoutCircle02Icon} strokeWidth={2} />
+        Sair
+      </DropdownMenuItem>
+    </>
+  );
+}
+
+export function NavUser({
+  user,
+}: {
+  user: NavUserInfo;
+}) {
+  const initials = getInitials(user.name);
+  const { isMobile } = useSidebar();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const themeSelectOpenRef = useRef(false);
+  const { signingOut, handleSignOut } = useUserSignOut();
 
   return (
     <SidebarMenu>
@@ -124,46 +190,63 @@ export function NavUser({
             align="end"
             sideOffset={4}
           >
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="p-0 font-normal">
-                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                  <Avatar>
-                    {user.avatar ? (
-                      <AvatarImage src={user.avatar} alt={user.name} />
-                    ) : null}
-                    <AvatarFallback>{initials}</AvatarFallback>
-                  </Avatar>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{user.name}</span>
-                    <span className="truncate text-xs">{user.email}</span>
-                  </div>
-                </div>
-              </DropdownMenuLabel>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <div className="flex items-center gap-2.5 rounded-xl px-3 py-2">
-              <HugeiconsIcon icon={PaintBoardIcon} strokeWidth={2} className="size-4 shrink-0" />
-              <span className="text-sm">Tema</span>
-              <div className="ml-auto">
-                <ThemeSelect
-                  onOpenChange={(open) => {
-                    themeSelectOpenRef.current = open;
-                  }}
-                />
-              </div>
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              disabled={signingOut}
-              onClick={handleSignOut}
-              variant="destructive"
-            >
-              <HugeiconsIcon icon={LogoutCircle02Icon} strokeWidth={2} />
-              Sair
-            </DropdownMenuItem>
+            <NavUserMenuContent
+              user={user}
+              signingOut={signingOut}
+              onSignOut={handleSignOut}
+              onThemeSelectOpenChange={(open) => {
+                themeSelectOpenRef.current = open;
+              }}
+            />
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>
     </SidebarMenu>
+  );
+}
+
+export function MobileNavUser({
+  user,
+  open,
+  onOpenChange,
+  trigger,
+}: {
+  user: NavUserInfo;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  trigger: ReactElement;
+}) {
+  const themeSelectOpenRef = useRef(false);
+  const { signingOut, handleSignOut } = useUserSignOut();
+
+  return (
+    <DropdownMenu
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && themeSelectOpenRef.current) {
+          return;
+        }
+        onOpenChange(nextOpen);
+      }}
+    >
+      <DropdownMenuTrigger render={trigger} />
+      <DropdownMenuContent
+        className="z-50 min-w-56 rounded-2xl"
+        side="top"
+        align="end"
+        sideOffset={16}
+      >
+        <NavUserMenuContent
+          user={user}
+          signingOut={signingOut}
+          onSignOut={handleSignOut}
+          themeSide="top"
+          themeAlign="end"
+          onThemeSelectOpenChange={(nextOpen) => {
+            themeSelectOpenRef.current = nextOpen;
+          }}
+        />
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

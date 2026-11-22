@@ -24,6 +24,8 @@ export type NavSectionItem = {
 
 export type NavSectionGroup = {
   label?: string;
+  icon?: IconSvgElement;
+  mobileUrl?: string;
   items: NavSectionItem[];
 };
 

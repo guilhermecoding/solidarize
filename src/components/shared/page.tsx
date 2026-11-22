@@ -21,7 +21,7 @@ export default function Page({
     ...props
 }: PageProps) {
     return (
-        <main className={cn("w-full min-w-0 flex-1 pt-6 pb-12 @container/main", className)} {...props}>
+        <main className={cn("w-full min-w-0 flex-1 pt-6 pb-28 md:pb-12 @container/main", className)} {...props}>
             {showBack ? <PageBackButton /> : null}
             {children}
         </main>

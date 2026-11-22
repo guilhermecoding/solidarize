@@ -21,8 +21,12 @@ type ThemeValue = keyof typeof THEME_ITEMS;
 
 export function ThemeSelect({
   onOpenChange,
+  side = "right",
+  align = "center",
 }: {
   onOpenChange?: (open: boolean) => void;
+  side?: "top" | "right" | "bottom" | "left";
+  align?: "start" | "center" | "end";
 }) {
   const { theme, setTheme } = useTheme();
   const value = (theme ?? "system") as ThemeValue;
@@ -45,8 +49,8 @@ export function ThemeSelect({
         <SelectValue />
       </SelectTrigger>
       <SelectContent
-        align="center"
-        side="right"
+        align={align}
+        side={side}
         sideOffset={8}
         alignItemWithTrigger={false}
         className="z-60 min-w-36"

@@ -1,10 +1,12 @@
 import {
+    DashboardSquare02Icon,
     HealtcareIcon,
     Home04Icon,
     PieChartIcon,
     ServiceIcon,
     ShoppingBasket03Icon,
     ShoppingBasketFavorite03Icon,
+    UserAccountIcon,
     UserMultiple02Icon,
 } from "@hugeicons/core-free-icons";
 
@@ -27,6 +29,8 @@ export const navPrimary: NavSectionGroup = {
 export const navManagement: NavSectionGroup[] = [
     {
         label: "GESTÃO",
+        icon: DashboardSquare02Icon,
+        mobileUrl: "/gestao",
         items: [
             {
                 name: "Beneficiários",
@@ -56,6 +60,8 @@ export const navManagement: NavSectionGroup[] = [
     },
     {
         label: "MEMBRO",
+        icon: UserAccountIcon,
+        mobileUrl: "/membro",
         items: [
             {
                 name: "Minhas Famílias",
