@@ -91,6 +91,7 @@ function NavUserMenuContent({
   onThemeSelectOpenChange,
   themeSide = "right",
   themeAlign = "center",
+  themeContentClassName,
 }: {
   user: NavUserInfo;
   signingOut: boolean;
@@ -98,6 +99,7 @@ function NavUserMenuContent({
   onThemeSelectOpenChange: (open: boolean) => void;
   themeSide?: "top" | "right" | "bottom" | "left";
   themeAlign?: "start" | "center" | "end";
+  themeContentClassName?: string;
 }) {
   const initials = getInitials(user.name);
 
@@ -127,6 +129,7 @@ function NavUserMenuContent({
           <ThemeSelect
             side={themeSide}
             align={themeAlign}
+            contentClassName={themeContentClassName}
             onOpenChange={onThemeSelectOpenChange}
           />
         </div>
@@ -231,7 +234,7 @@ export function MobileNavUser({
     >
       <DropdownMenuTrigger render={trigger} />
       <DropdownMenuContent
-        className="z-50 min-w-56 rounded-2xl"
+        className="mobile-nav-surface z-50 min-w-56 rounded-2xl ring-border"
         side="top"
         align="end"
         sideOffset={36}
@@ -242,6 +245,7 @@ export function MobileNavUser({
           onSignOut={handleSignOut}
           themeSide="top"
           themeAlign="end"
+          themeContentClassName="mobile-nav-surface ring-border"
           onThemeSelectOpenChange={(nextOpen) => {
             themeSelectOpenRef.current = nextOpen;
           }}
