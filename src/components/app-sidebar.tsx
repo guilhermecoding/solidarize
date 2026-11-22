@@ -1,7 +1,11 @@
 import type { ComponentProps } from "react";
 import { Suspense } from "react";
+import Link from "next/link";
 
-import { NavManagement } from "@/components/nav-management";
+import {
+  NavManagementLoader,
+  NavManagementSkeleton,
+} from "@/components/nav-management-loader";
 import { NavSecondary } from "@/components/nav-secondary";
 import { NavUserLoader, NavUserSkeleton } from "@/components/nav-user-loader";
 import {
@@ -15,7 +19,6 @@ import {
 } from "@/components/ui/sidebar";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ChartRingIcon } from "@hugeicons/core-free-icons";
-import { navManagement } from "@/app/(sistema)/_config/nav-management";
 import IconLogo from "./logo/icon-logo";
 import TextLogo from "./logo/text-logo";
 
@@ -37,7 +40,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<a href="#" />} className="flex justify-center" >
+            <SidebarMenuButton size="lg" render={<Link href="/" />} className="flex justify-center" >
               <div className="flex items-center gap-2">
                 <IconLogo className="size-8" />
                 <TextLogo className="text-xl" />
@@ -48,7 +51,9 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         {/* <NavMain items={data.navMain} /> */}
-        <NavManagement items={navManagement} />
+        <Suspense fallback={<NavManagementSkeleton />}>
+          <NavManagementLoader />
+        </Suspense>
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>

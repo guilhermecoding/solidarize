@@ -77,6 +77,7 @@ export function NavUser({
         fetchOptions: {
           onSuccess: () => {
             router.replace("/entrar");
+            router.refresh();
           },
           onError: () => {
             setSigningOut(false);

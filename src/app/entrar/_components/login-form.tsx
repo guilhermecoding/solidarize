@@ -62,7 +62,7 @@ export function LoginForm({
         return;
       }
 
-      router.replace("/inicio");
+      router.replace("/");
       router.refresh();
     },
     onError: ({ error: actionError }) => {

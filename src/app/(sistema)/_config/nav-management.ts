@@ -5,28 +5,33 @@ export type NavManagementItem = {
     name: string;
     url: string;
     icon: IconSvgElement;
+    requiresReadAccess?: boolean;
 };
 
 export const navManagement: NavManagementItem[] = [
     {
         name: "Início",
-        url: "/inicio",
+        url: "/",
         icon: Home04Icon,
+        requiresReadAccess: false,
     },
     {
         name: "Beneficiários",
         url: "/beneficiarios",
         icon: ServiceIcon,
+        requiresReadAccess: true,
     },
     {
         name: "Membros",
         url: "/membros",
         icon: UserMultiple02Icon,
+        requiresReadAccess: true,
     },
     {
         name: "Cestas e Alimentos",
         url: "/cestas",
         icon: ShoppingBasket03Icon,
-    }
+        requiresReadAccess: true,
+    },
 
 ];
