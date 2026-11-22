@@ -57,9 +57,9 @@ export const navManagement: NavSectionGroup[] = [
         ],
     },
     {
-        label: "MEMBRO",
+        label: "PARA VOCÊ",
         icon: HealtcareIcon,
-        mobileUrl: "/membro",
+        mobileUrl: "/para-voce",
         items: [
             {
                 name: "Minhas Famílias",

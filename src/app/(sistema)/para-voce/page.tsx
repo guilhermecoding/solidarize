@@ -8,17 +8,17 @@ import {
 import Page from "@/components/shared/page";
 
 export const metadata: Metadata = {
-    title: "Membro",
+    title: "Para você",
 };
 
 /**
- * Página dedicada aos atalhos do menu Membro.
+ * Página dedicada aos atalhos do menu Para você.
  */
-export default function MembroPage() {
+export default function ForYouPage() {
     return (
         <Page showBack>
             <Suspense fallback={<MobileMenuSkeleton itemCount={2} />}>
-                <MobileMenuSection sectionLabel="MEMBRO" title="Membro" />
+                <MobileMenuSection sectionLabel="PARA VOCÊ" title="Para você" />
             </Suspense>
         </Page>
     );
