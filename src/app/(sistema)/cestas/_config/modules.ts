@@ -69,7 +69,7 @@ export const basketModules: ModuleGroup = {
             kind: "link",
             title: "Modelos de Cesta",
             description: "Defina padrões pré-configurados de cestas.",
-            actionLabel: "Gerenciar templates",
+            actionLabel: "Gerenciar modelos",
             href: "/cestas/modelos",
             icon: GridViewIcon,
         },
