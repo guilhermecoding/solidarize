@@ -1,14 +1,16 @@
 import {
     Apple01Icon,
+    ArrowBigDownDashIcon,
     CirclePlusIcon,
     Clock01Icon,
     GridViewIcon,
     ListViewIcon,
     ShoppingBasket03Icon,
+    ShoppingBasketCheckOut03Icon,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 
-export type HubAction = "new-basket" | "new-food";
+export type HubAction = "new-basket" | "withdraw-basket" | "new-food" | "withdraw-food";
 
 type BaseModuleItem = {
     id: string;
@@ -34,7 +36,7 @@ export type ModuleGroup = {
     id: string;
     title: string;
     icon: IconSvgElement;
-    columns: 3 | 4;
+    columns: 3 | 4 | 5;
     items: ModuleItem[];
 };
 
@@ -42,7 +44,7 @@ export const basketModules: ModuleGroup = {
     id: "cestas",
     title: "Cestas de Alimentação",
     icon: ShoppingBasket03Icon,
-    columns: 4,
+    columns: 5,
     items: [
         {
             id: "nova-cesta",
@@ -72,6 +74,15 @@ export const basketModules: ModuleGroup = {
             icon: GridViewIcon,
         },
         {
+            id: "retirar-cestas",
+            kind: "action",
+            title: "Retirar Cestas",
+            description: "Registre a retirada de cestas em estoque e direcione para um beneficiário.",
+            actionLabel: "Registrar retirada",
+            action: "withdraw-basket",
+            icon: ShoppingBasketCheckOut03Icon,
+        },
+        {
             id: "historico-cestas",
             kind: "link",
             title: "Histórico",
@@ -87,7 +98,7 @@ export const foodModules: ModuleGroup = {
     id: "alimentos",
     title: "Alimentos",
     icon: Apple01Icon,
-    columns: 3,
+    columns: 4,
     items: [
         {
             id: "novo-alimento",
@@ -106,6 +117,15 @@ export const foodModules: ModuleGroup = {
             actionLabel: "Ver inventário",
             href: "/cestas/alimentos/listar",
             icon: ListViewIcon,
+        },
+        {
+            id: "retirar-alimentos",
+            kind: "action",
+            title: "Retirar Alimentos",
+            description: "Registre a retirada de alimentos em estoque e direcione para um beneficiário.",
+            actionLabel: "Registrar retirada",
+            action: "withdraw-food",
+            icon: ArrowBigDownDashIcon,
         },
         {
             id: "historico-alimentos",

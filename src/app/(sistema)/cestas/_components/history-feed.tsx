@@ -105,6 +105,11 @@ export function HistoryFeed({
                                                         <Badge variant="muted">{item.subtitle}</Badge>
                                                     ) : null}
                                                 </div>
+                                                {item.detail ? (
+                                                    <p className="mt-1 text-xs text-muted-foreground break-words">
+                                                        {item.detail}
+                                                    </p>
+                                                ) : null}
                                                 <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                                                     <span>{item.createdAtLabel}</span>
                                                     <span aria-hidden="true">•</span>

@@ -54,3 +54,22 @@ export type UpdateBasketInput = {
     quantity: number;
     foodIds: string[];
 };
+
+export type WithdrawBasketItemInput = {
+    basketId: string;
+    quantity: number;
+};
+
+export type WithdrawBasketsInput =
+    | {
+        items: WithdrawBasketItemInput[];
+        recipientType: "listed";
+        beneficiaryId: string;
+        justification?: string;
+    }
+    | {
+        items: WithdrawBasketItemInput[];
+        recipientType: "unlisted";
+        beneficiaryId?: string;
+        justification: string;
+    };

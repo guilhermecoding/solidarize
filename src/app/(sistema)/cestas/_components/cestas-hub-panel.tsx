@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { BasketDrawer } from "@/app/(sistema)/cestas/_components/basket-drawer";
 import { FoodDrawer } from "@/app/(sistema)/cestas/_components/food-drawer";
 import { ModuleSection } from "@/app/(sistema)/cestas/_components/module-section";
+import { WithdrawBasketDrawer } from "@/app/(sistema)/cestas/_components/withdraw-basket-drawer";
+import { WithdrawFoodDrawer } from "@/app/(sistema)/cestas/_components/withdraw-food-drawer";
 import {
     basketModules,
     foodModules,
@@ -13,24 +15,31 @@ import {
 } from "@/app/(sistema)/cestas/_config/modules";
 import { ResultDialog } from "@/components/shared/result-dialog";
 import { useMemberAccess } from "@/hooks/use-member-access";
-import type { BasketTemplateRecord } from "@/services/basket/basket.type";
-import type { FoodOptionRecord } from "@/services/food/food.type";
+import type { BasketRecord, BasketTemplateRecord } from "@/services/basket/basket.type";
+import type { BeneficiaryOptionRecord } from "@/services/beneficiary/beneficiary.type";
+import type { FoodOptionRecord, FoodRecord } from "@/services/food/food.type";
 
 type CestasHubPanelProps = {
     canWrite: boolean;
     nextBasketName: string;
     templates: BasketTemplateRecord[];
     foods: FoodOptionRecord[];
+    availableBaskets: BasketRecord[];
+    availableFoods: FoodRecord[];
+    beneficiaries: BeneficiaryOptionRecord[];
 };
 
 /**
- * Painel interativo do hub de Cestas e Alimentos que coordena os dialogs de cadastro.
+ * Painel interativo do hub de Cestas e Alimentos que coordena os dialogs de cadastro e retirada.
  */
 export function CestasHubPanel({
     canWrite: initialCanWrite,
     nextBasketName,
     templates,
     foods,
+    availableBaskets,
+    availableFoods,
+    beneficiaries,
 }: CestasHubPanelProps) {
     const router = useRouter();
     const access = useMemberAccess();
@@ -83,6 +92,28 @@ export function CestasHubPanel({
                     />
                     <FoodDrawer
                         open={activeAction === "new-food"}
+                        onOpenChange={(nextOpen) => {
+                            if (!nextOpen) {
+                                setActiveAction(null);
+                            }
+                        }}
+                        onSaved={handleSuccess}
+                    />
+                    <WithdrawBasketDrawer
+                        open={activeAction === "withdraw-basket"}
+                        baskets={availableBaskets}
+                        beneficiaries={beneficiaries}
+                        onOpenChange={(nextOpen) => {
+                            if (!nextOpen) {
+                                setActiveAction(null);
+                            }
+                        }}
+                        onSaved={handleSuccess}
+                    />
+                    <WithdrawFoodDrawer
+                        open={activeAction === "withdraw-food"}
+                        foods={availableFoods}
+                        beneficiaries={beneficiaries}
                         onOpenChange={(nextOpen) => {
                             if (!nextOpen) {
                                 setActiveAction(null);

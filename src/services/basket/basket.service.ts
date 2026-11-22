@@ -8,6 +8,7 @@ import {
     createBasketSchema,
     updateBasketSchema,
     updateBasketTemplateSchema,
+    withdrawBasketsSchema,
 } from "@/app/(sistema)/cestas/schema";
 import { Prisma } from "@/generated/prisma/client";
 import {
@@ -25,6 +26,7 @@ import type {
     CreateBasketTemplateInput,
     UpdateBasketInput,
     UpdateBasketTemplateInput,
+    WithdrawBasketsInput,
 } from "@/services/basket/basket.type";
 import {
     foodTypeLabels,
@@ -340,41 +342,33 @@ async function readNextBasketName(): Promise<string> {
     return `${dateKey}-${String(nextNumber).padStart(2, "0")}`;
 }
 
-/**
- * Lista todas as cestas cadastradas da mais recente para a mais antiga.
- */
-export async function listBaskets(): Promise<BasketRecord[]> {
-    "use cache";
-    cacheTag(BASKET_CACHE_TAG);
-    cacheLife("minutes");
-
-    const rows = await prisma.basket.findMany({
-        orderBy: { createdAt: "desc" },
+const basketInclude = {
+    template: {
+        select: { name: true },
+    },
+    foods: {
         include: {
-            template: {
-                select: { name: true },
-            },
-            foods: {
-                include: {
-                    food: {
-                        select: {
-                            id: true,
-                            label: true,
-                            type: true,
-                            batch: true,
-                        },
-                    },
-                },
-                orderBy: {
-                    food: {
-                        label: "asc",
-                    },
+            food: {
+                select: {
+                    id: true,
+                    label: true,
+                    type: true,
+                    batch: true,
                 },
             },
         },
-    });
+        orderBy: {
+            food: {
+                label: "asc",
+            },
+        },
+    },
+} satisfies Prisma.BasketInclude;
 
-    return rows.map((row) => ({
+type BasketRow = Prisma.BasketGetPayload<{ include: typeof basketInclude }>;
+
+function toBasketRecord(row: BasketRow): BasketRecord {
+    return {
         id: row.id,
         name: row.name,
         quantity: row.quantity,
@@ -396,7 +390,40 @@ export async function listBaskets(): Promise<BasketRecord[]> {
         createdByName: row.createdByName,
         createdAtLabel: formatDateTimeBr(row.createdAt),
         createdAtDateLabel: formatDateBr(row.createdAt),
-    }));
+    };
+}
+
+/**
+ * Lista todas as cestas cadastradas da mais recente para a mais antiga.
+ */
+export async function listBaskets(): Promise<BasketRecord[]> {
+    "use cache";
+    cacheTag(BASKET_CACHE_TAG);
+    cacheLife("minutes");
+
+    const rows = await prisma.basket.findMany({
+        orderBy: { createdAt: "desc" },
+        include: basketInclude,
+    });
+
+    return rows.map(toBasketRecord);
+}
+
+/**
+ * Lista apenas as cestas com estoque disponível (quantidade > 0) para retirada.
+ */
+export async function listAvailableBaskets(): Promise<BasketRecord[]> {
+    "use cache";
+    cacheTag(BASKET_CACHE_TAG);
+    cacheLife("minutes");
+
+    const rows = await prisma.basket.findMany({
+        where: { quantity: { gt: 0 } },
+        orderBy: { createdAt: "desc" },
+        include: basketInclude,
+    });
+
+    return rows.map(toBasketRecord);
 }
 
 /**
@@ -682,6 +709,114 @@ export async function deleteBasket(
 }
 
 /**
+ * Registra a retirada de uma ou mais cestas em estoque, direcionando-as para um beneficiário listado ou não listado.
+ */
+export async function withdrawBaskets(
+    actor: InventoryActor,
+    input: WithdrawBasketsInput,
+): Promise<ServerResponse> {
+    const parsed = withdrawBasketsSchema.safeParse(input);
+
+    if (!parsed.success) {
+        return serverFailure(parsed.error.issues[0]?.message ?? "Dados inválidos.");
+    }
+
+    const data = parsed.data;
+    const basketIds = data.items.map((item) => item.basketId);
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            let beneficiaryId: string | null = null;
+            let beneficiaryName: string | null = null;
+            let justification: string | null = null;
+
+            if (data.recipientType === "listed") {
+                const beneficiary = await tx.beneficiary.findUnique({
+                    where: { id: data.beneficiaryId },
+                    select: { id: true, name: true },
+                });
+
+                if (!beneficiary) {
+                    throw new InventoryRuleError("O beneficiário selecionado não foi encontrado.");
+                }
+
+                beneficiaryId = beneficiary.id;
+                beneficiaryName = beneficiary.name;
+            } else {
+                justification = data.justification.trim();
+            }
+
+            const baskets = await tx.basket.findMany({
+                where: { id: { in: basketIds } },
+                select: {
+                    id: true,
+                    name: true,
+                    quantity: true,
+                },
+            });
+
+            if (baskets.length !== basketIds.length) {
+                throw new InventoryRuleError("Uma ou mais cestas selecionadas não existem mais.");
+            }
+
+            const basketMap = new Map(baskets.map((basket) => [basket.id, basket]));
+
+            for (const item of data.items) {
+                const basket = basketMap.get(item.basketId);
+
+                if (!basket) {
+                    throw new InventoryRuleError("Uma ou mais cestas selecionadas não existem mais.");
+                }
+
+                const updated = await tx.basket.updateMany({
+                    where: {
+                        id: basket.id,
+                        quantity: { gte: item.quantity },
+                    },
+                    data: {
+                        quantity: { decrement: item.quantity },
+                    },
+                });
+
+                if (updated.count === 0) {
+                    throw new InventoryRuleError(
+                        `Estoque insuficiente para a cesta "${basket.name}". Disponível: ${basket.quantity}.`,
+                    );
+                }
+
+                await tx.basketHistory.create({
+                    data: {
+                        basketId: basket.id,
+                        basketName: basket.name,
+                        type: "out",
+                        quantity: item.quantity,
+                        description: formatBasketWithdrawalDescription(item.quantity, beneficiaryName),
+                        beneficiaryId,
+                        beneficiaryName,
+                        justification,
+                        createdById: actor.id,
+                        createdByName: actor.name,
+                    },
+                });
+            }
+        });
+
+        const totalUnits = data.items.reduce((sum, item) => sum + item.quantity, 0);
+        const message = totalUnits === 1
+            ? "Retirada de 1 cesta registrada com sucesso."
+            : `Retirada de ${totalUnits} cestas registrada com sucesso.`;
+
+        return serverSuccess(undefined, message);
+    } catch (error) {
+        if (error instanceof InventoryRuleError) {
+            return serverFailure(error.message);
+        }
+
+        throw error;
+    }
+}
+
+/**
  * Lista o histórico paginado de entradas e saídas de cestas (10 por página).
  */
 export async function listBasketHistoryPage({
@@ -716,6 +851,7 @@ export async function listBasketHistoryPage({
                 type: toHistoryType(row.type),
                 title: row.description,
                 subtitle: row.basketName,
+                detail: row.justification ? `Justificativa: ${row.justification}` : null,
                 createdAtLabel: formatDateTimeBr(row.createdAt),
                 createdByName: row.createdByName,
                 dayKey: dayGroup.key,
@@ -830,6 +966,16 @@ function formatBasketInDescription(quantity: number): string {
 
 function formatBasketOutDescription(quantity: number): string {
     return quantity === 1 ? "Cesta retirada" : `${quantity} cestas retiradas`;
+}
+
+function formatBasketWithdrawalDescription(quantity: number, beneficiaryName: string | null): string {
+    const base = quantity === 1 ? "1 cesta retirada" : `${quantity} cestas retiradas`;
+
+    if (beneficiaryName) {
+        return `${base} para ${beneficiaryName}`;
+    }
+
+    return `${base} (beneficiário não listado)`;
 }
 
 function isUniqueError(error: unknown): boolean {

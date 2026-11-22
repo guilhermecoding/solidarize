@@ -96,12 +96,100 @@ export const updateFoodSchema = editFoodFormSchema.extend({
     id: z.string().trim().min(1, "Alimento inválido."),
 });
 
+export const WITHDRAWAL_JUSTIFICATION_MIN_LENGTH = 10;
+
+const withdrawalRecipientSchema = z.discriminatedUnion("recipientType", [
+    z.object({
+        recipientType: z.literal("listed"),
+        beneficiaryId: z.string().trim().min(1, "Selecione um beneficiário."),
+        justification: z.string().trim().max(500).optional().default(""),
+    }),
+    z.object({
+        recipientType: z.literal("unlisted"),
+        beneficiaryId: z.string().trim().optional().default(""),
+        justification: z
+            .string()
+            .trim()
+            .min(
+                WITHDRAWAL_JUSTIFICATION_MIN_LENGTH,
+                `Informe uma justificativa com ao menos ${WITHDRAWAL_JUSTIFICATION_MIN_LENGTH} caracteres.`,
+            )
+            .max(500, "A justificativa deve ter no máximo 500 caracteres."),
+    }),
+]);
+
+const withdrawBasketItemSchema = z.object({
+    basketId: z.string().trim().min(1, "Cesta inválida."),
+    quantity: z.number().int("Informe uma quantidade inteira.").min(1, "A quantidade mínima é 1."),
+});
+
+const withdrawBasketItemsSchema = z
+    .array(withdrawBasketItemSchema)
+    .min(1, "Selecione ao menos uma cesta para retirar.")
+    .superRefine((items, ctx) => {
+        const seen = new Set<string>();
+
+        items.forEach((item, index) => {
+            if (seen.has(item.basketId)) {
+                ctx.addIssue({
+                    code: "custom",
+                    message: "Cesta duplicada na retirada.",
+                    path: [index, "basketId"],
+                });
+                return;
+            }
+
+            seen.add(item.basketId);
+        });
+    });
+
+export const withdrawBasketsSchema = z.intersection(
+    z.object({
+        items: withdrawBasketItemsSchema,
+    }),
+    withdrawalRecipientSchema,
+);
+
+const withdrawFoodItemSchema = z.object({
+    foodId: z.string().trim().min(1, "Alimento inválido."),
+    quantity: z.number().int("Informe uma quantidade inteira.").min(1, "A quantidade mínima é 1."),
+});
+
+const withdrawFoodItemsSchema = z
+    .array(withdrawFoodItemSchema)
+    .min(1, "Selecione ao menos um alimento para retirar.")
+    .superRefine((items, ctx) => {
+        const seen = new Set<string>();
+
+        items.forEach((item, index) => {
+            if (seen.has(item.foodId)) {
+                ctx.addIssue({
+                    code: "custom",
+                    message: "Alimento duplicado na retirada.",
+                    path: [index, "foodId"],
+                });
+                return;
+            }
+
+            seen.add(item.foodId);
+        });
+    });
+
+export const withdrawFoodsSchema = z.intersection(
+    z.object({
+        items: withdrawFoodItemsSchema,
+    }),
+    withdrawalRecipientSchema,
+);
+
 export type CreateBasketFormValues = z.infer<typeof createBasketSchema>;
 export type UpdateBasketFormValues = z.infer<typeof updateBasketSchema>;
 export type BasketTemplateFormValues = z.infer<typeof basketTemplateSchema>;
 export type UpdateBasketTemplateFormValues = z.infer<typeof updateBasketTemplateSchema>;
 export type CreateFoodFormValues = z.infer<typeof createFoodSchema>;
 export type UpdateFoodFormValues = z.infer<typeof updateFoodSchema>;
+export type WithdrawBasketsFormValues = z.infer<typeof withdrawBasketsSchema>;
+export type WithdrawFoodsFormValues = z.infer<typeof withdrawFoodsSchema>;
 
 export const emptyCreateBasketFormValues: CreateBasketFormValues = {
     templateId: "new",

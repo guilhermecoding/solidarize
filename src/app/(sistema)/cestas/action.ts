@@ -12,6 +12,8 @@ import {
     updateBasketSchema,
     updateBasketTemplateSchema,
     updateFoodSchema,
+    withdrawBasketsSchema,
+    withdrawFoodsSchema,
 } from "@/app/(sistema)/cestas/schema";
 import { inventoryWriteActionClient } from "@/lib/safe-action";
 import {
@@ -25,6 +27,7 @@ import {
     getFreshNextBasketName,
     updateBasket,
     updateBasketTemplate,
+    withdrawBaskets,
 } from "@/services/basket/basket.service";
 import {
     FOOD_CACHE_TAG,
@@ -32,6 +35,7 @@ import {
     createFood,
     deleteFood,
     updateFood,
+    withdrawFoods,
 } from "@/services/food/food.service";
 
 function refreshInventory({
@@ -140,6 +144,24 @@ export const deleteBasketAction = inventoryWriteActionClient
         return result;
     });
 
+export const withdrawBasketsAction = inventoryWriteActionClient
+    .inputSchema(withdrawBasketsSchema)
+    .action(async ({ parsedInput, ctx }) => {
+        const result = await withdrawBaskets(
+            { id: ctx.actor.id, name: ctx.actor.name },
+            parsedInput,
+        );
+
+        if (result.ok) {
+            refreshInventory({
+                baskets: true,
+                basketHistory: true,
+            });
+        }
+
+        return result;
+    });
+
 export const createBasketTemplateAction = inventoryWriteActionClient
     .inputSchema(basketTemplateSchema)
     .action(async ({ parsedInput, ctx }) => {
@@ -232,6 +254,24 @@ export const deleteFoodAction = inventoryWriteActionClient
                 foodHistory: true,
                 baskets: true,
                 templates: true,
+            });
+        }
+
+        return result;
+    });
+
+export const withdrawFoodsAction = inventoryWriteActionClient
+    .inputSchema(withdrawFoodsSchema)
+    .action(async ({ parsedInput, ctx }) => {
+        const result = await withdrawFoods(
+            { id: ctx.actor.id, name: ctx.actor.name },
+            parsedInput,
+        );
+
+        if (result.ok) {
+            refreshInventory({
+                foods: true,
+                foodHistory: true,
             });
         }
 

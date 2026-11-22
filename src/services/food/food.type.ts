@@ -113,6 +113,7 @@ export type HistoryItemRecord = {
     type: "in" | "out" | "delete";
     title: string;
     subtitle: string;
+    detail?: string | null;
     createdAtLabel: string;
     createdByName: string;
     dayKey: string;
@@ -138,3 +139,22 @@ export type CreateFoodInput = {
 export type UpdateFoodInput = CreateFoodInput & {
     id: string;
 };
+
+export type WithdrawFoodItemInput = {
+    foodId: string;
+    quantity: number;
+};
+
+export type WithdrawFoodsInput =
+    | {
+        items: WithdrawFoodItemInput[];
+        recipientType: "listed";
+        beneficiaryId: string;
+        justification?: string;
+    }
+    | {
+        items: WithdrawFoodItemInput[];
+        recipientType: "unlisted";
+        beneficiaryId?: string;
+        justification: string;
+    };

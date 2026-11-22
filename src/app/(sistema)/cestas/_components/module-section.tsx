@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 const gridColumns = {
     3: "sm:grid-cols-2 lg:grid-cols-3",
     4: "sm:grid-cols-2 xl:grid-cols-4",
+    5: "sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5",
 } as const;
 
 /**

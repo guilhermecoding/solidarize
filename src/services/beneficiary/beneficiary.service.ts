@@ -27,6 +27,7 @@ import {
     type AidType,
     type BeneficiaryGender,
     type BeneficiaryInput,
+    type BeneficiaryOptionRecord,
     type BeneficiaryRecord,
     type BeneficiaryStatus,
     type Employment,
@@ -132,6 +133,40 @@ export async function listBeneficiaries(): Promise<BeneficiaryRecord[]> {
     });
 
     return beneficiaries.map(toBeneficiary);
+}
+
+/**
+ * Lista opções enxutas de beneficiários cadastrados em ordem alfabética para seleção em retiradas.
+ */
+export async function listBeneficiaryOptions(): Promise<BeneficiaryOptionRecord[]> {
+    "use cache";
+    cacheTag(BENEFICIARY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const rows = await prisma.beneficiary.findMany({
+        orderBy: { name: "asc" },
+        select: {
+            id: true,
+            name: true,
+            cpf: true,
+            dateOfBirth: true,
+            neighborhood: true,
+            city: true,
+            state: true,
+            status: true,
+        },
+    });
+
+    return rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        cpf: row.cpf ? formatCpf(row.cpf) : "",
+        ageLabel: formatAge(row.dateOfBirth),
+        neighborhood: row.neighborhood,
+        city: row.city,
+        state: row.state,
+        status: isBeneficiaryStatus(row.status) ? row.status : "rejected",
+    }));
 }
 
 export async function searchBeneficiaries(query: string): Promise<BeneficiaryRecord[]> {

@@ -118,9 +118,11 @@ model Beneficiary {
   aidType       String
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
-  contacts      BeneficiaryContact[]
-  members       FamilyMember[]
-  assistants    BeneficiaryAssistant[]
+  contacts        BeneficiaryContact[]
+  members         FamilyMember[]
+  assistants      BeneficiaryAssistant[]
+  foodHistories   FoodHistory[]
+  basketHistories BasketHistory[]
 
   @@unique([cpf])
   @@index([name])
@@ -225,21 +227,26 @@ model Food {
 }
 
 model FoodHistory {
-  id            String   @id @default(uuid())
-  foodId        String?
-  food          Food?    @relation(fields: [foodId], references: [id], onDelete: SetNull)
-  foodLabel     String
-  foodBatch     String
-  type          String
-  quantity      Int
-  description   String
-  createdById   String?
-  createdBy     User?    @relation("FoodHistoryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  createdByName String
-  createdAt     DateTime @default(now())
+  id              String       @id @default(uuid())
+  foodId          String?
+  food            Food?        @relation(fields: [foodId], references: [id], onDelete: SetNull)
+  foodLabel       String
+  foodBatch       String
+  type            String
+  quantity        Int
+  description     String
+  beneficiaryId   String?
+  beneficiary     Beneficiary? @relation(fields: [beneficiaryId], references: [id], onDelete: SetNull)
+  beneficiaryName String?
+  justification   String?
+  createdById     String?
+  createdBy       User?        @relation("FoodHistoryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdByName   String
+  createdAt       DateTime     @default(now())
 
   @@index([createdAt(sort: Desc)])
   @@index([foodId])
+  @@index([beneficiaryId])
   @@index([createdById])
   @@map("food_history")
   @@schema("public")
@@ -318,20 +325,25 @@ model BasketFood {
 }
 
 model BasketHistory {
-  id            String   @id @default(uuid())
-  basketId      String?
-  basket        Basket?  @relation(fields: [basketId], references: [id], onDelete: SetNull)
-  basketName    String
-  type          String
-  quantity      Int
-  description   String
-  createdById   String?
-  createdBy     User?    @relation("BasketHistoryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  createdByName String
-  createdAt     DateTime @default(now())
+  id              String       @id @default(uuid())
+  basketId        String?
+  basket          Basket?      @relation(fields: [basketId], references: [id], onDelete: SetNull)
+  basketName      String
+  type            String
+  quantity        Int
+  description     String
+  beneficiaryId   String?
+  beneficiary     Beneficiary? @relation(fields: [beneficiaryId], references: [id], onDelete: SetNull)
+  beneficiaryName String?
+  justification   String?
+  createdById     String?
+  createdBy       User?        @relation("BasketHistoryCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdByName   String
+  createdAt       DateTime     @default(now())
 
   @@index([createdAt(sort: Desc)])
   @@index([basketId])
+  @@index([beneficiaryId])
   @@index([createdById])
   @@map("basket_history")
   @@schema("public")

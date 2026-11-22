@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { cacheLife, cacheTag } from "next/cache";
 
 import { serverFailure, serverSuccess, type ServerResponse } from "@/@types/server-response";
-import { createFoodSchema, updateFoodSchema } from "@/app/(sistema)/cestas/schema";
+import { createFoodSchema, updateFoodSchema, withdrawFoodsSchema } from "@/app/(sistema)/cestas/schema";
 import { Prisma } from "@/generated/prisma/client";
 import {
     formatDateBr,
@@ -30,6 +30,7 @@ import {
     type HistoryPage,
     type InventoryActor,
     type UpdateFoodInput,
+    type WithdrawFoodsInput,
 } from "@/services/food/food.type";
 
 export const FOOD_CACHE_TAG = "foods";
@@ -40,6 +41,31 @@ const EXPIRING_WINDOW_DAYS = 7;
 const DEFAULT_FOODS_PAGE_SIZE = 15;
 const DEFAULT_HISTORY_PAGE_SIZE = 10;
 const MAX_BATCH_ATTEMPTS = 5;
+
+class FoodInventoryRuleError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "FoodInventoryRuleError";
+    }
+}
+
+/**
+ * Lista todos os alimentos com estoque disponível (quantidade > 0) para retirada.
+ */
+export async function listAvailableFoods(): Promise<FoodRecord[]> {
+    "use cache";
+    cacheTag(FOOD_CACHE_TAG);
+    cacheLife("minutes");
+
+    const referenceDateKey = getBrazilDateKey(new Date());
+
+    const rows = await prisma.food.findMany({
+        where: { quantity: { gt: 0 } },
+        orderBy: [{ label: "asc" }, { createdAt: "desc" }],
+    });
+
+    return rows.map((row) => toFoodRecord(row, referenceDateKey));
+}
 
 /**
  * Lista alimentos ordenados alfabeticamente para seleção em formulários de cesta e modelo.
@@ -172,6 +198,7 @@ export async function listFoodHistoryPage({
                 type: toHistoryType(row.type),
                 title: row.description,
                 subtitle: `#${row.foodBatch}`,
+                detail: row.justification ? `Justificativa: ${row.justification}` : null,
                 createdAtLabel: formatDateTimeBr(row.createdAt),
                 createdByName: row.createdByName,
                 dayKey: dayGroup.key,
@@ -412,6 +439,132 @@ export async function deleteFood(
     }
 
     return serverSuccess(undefined, "Alimento excluído com sucesso.");
+}
+
+/**
+ * Registra a retirada de um ou mais alimentos em estoque, direcionando-os para um beneficiário listado ou não listado.
+ */
+export async function withdrawFoods(
+    actor: InventoryActor,
+    input: WithdrawFoodsInput,
+): Promise<ServerResponse> {
+    const parsed = withdrawFoodsSchema.safeParse(input);
+
+    if (!parsed.success) {
+        return serverFailure(parsed.error.issues[0]?.message ?? "Dados inválidos.");
+    }
+
+    const data = parsed.data;
+    const foodIds = data.items.map((item) => item.foodId);
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            let beneficiaryId: string | null = null;
+            let beneficiaryName: string | null = null;
+            let justification: string | null = null;
+
+            if (data.recipientType === "listed") {
+                const beneficiary = await tx.beneficiary.findUnique({
+                    where: { id: data.beneficiaryId },
+                    select: { id: true, name: true },
+                });
+
+                if (!beneficiary) {
+                    throw new FoodInventoryRuleError("O beneficiário selecionado não foi encontrado.");
+                }
+
+                beneficiaryId = beneficiary.id;
+                beneficiaryName = beneficiary.name;
+            } else {
+                justification = data.justification.trim();
+            }
+
+            const foods = await tx.food.findMany({
+                where: { id: { in: foodIds } },
+                select: {
+                    id: true,
+                    label: true,
+                    batch: true,
+                    quantity: true,
+                },
+            });
+
+            if (foods.length !== foodIds.length) {
+                throw new FoodInventoryRuleError("Um ou mais alimentos selecionados não existem mais.");
+            }
+
+            const foodMap = new Map(foods.map((food) => [food.id, food]));
+
+            for (const item of data.items) {
+                const food = foodMap.get(item.foodId);
+
+                if (!food) {
+                    throw new FoodInventoryRuleError("Um ou mais alimentos selecionados não existem mais.");
+                }
+
+                const updated = await tx.food.updateMany({
+                    where: {
+                        id: food.id,
+                        quantity: { gte: item.quantity },
+                    },
+                    data: {
+                        quantity: { decrement: item.quantity },
+                    },
+                });
+
+                if (updated.count === 0) {
+                    throw new FoodInventoryRuleError(
+                        `Estoque insuficiente para "${food.label}" (#${food.batch}). Disponível: ${food.quantity}.`,
+                    );
+                }
+
+                await tx.foodHistory.create({
+                    data: {
+                        foodId: food.id,
+                        foodLabel: food.label,
+                        foodBatch: food.batch,
+                        type: "out",
+                        quantity: item.quantity,
+                        description: formatFoodWithdrawalDescription(item.quantity, food.label, beneficiaryName),
+                        beneficiaryId,
+                        beneficiaryName,
+                        justification,
+                        createdById: actor.id,
+                        createdByName: actor.name,
+                    },
+                });
+            }
+        });
+
+        const totalUnits = data.items.reduce((sum, item) => sum + item.quantity, 0);
+        const message = totalUnits === 1
+            ? "Retirada de 1 unidade de alimento registrada com sucesso."
+            : `Retirada de ${totalUnits} unidades de alimentos registrada com sucesso.`;
+
+        return serverSuccess(undefined, message);
+    } catch (error) {
+        if (error instanceof FoodInventoryRuleError) {
+            return serverFailure(error.message);
+        }
+
+        throw error;
+    }
+}
+
+function formatFoodWithdrawalDescription(
+    quantity: number,
+    label: string,
+    beneficiaryName: string | null,
+): string {
+    const base = quantity === 1
+        ? `1 unidade de ${label} retirada`
+        : `${quantity} unidades de ${label} retiradas`;
+
+    if (beneficiaryName) {
+        return `${base} para ${beneficiaryName}`;
+    }
+
+    return `${base} (beneficiário não listado)`;
 }
 
 function toHistoryType(value: string): "in" | "out" | "delete" {
