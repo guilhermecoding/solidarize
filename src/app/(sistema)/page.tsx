@@ -2,6 +2,10 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 
 import { GreetingSection } from "@/app/(sistema)/_components/greeting-section";
+import {
+    HomeMenusSection,
+    HomeMenusSkeleton,
+} from "@/app/(sistema)/_components/home-menus-section";
 import Page from "@/components/shared/page";
 import Section from "@/components/shared/section";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,6 +27,9 @@ export default function HomePage() {
         <Page>
             <Suspense fallback={<HomeSkeleton />}>
                 <GreetingSection />
+            </Suspense>
+            <Suspense fallback={<HomeMenusSkeleton />}>
+                <HomeMenusSection />
             </Suspense>
         </Page>
     );
