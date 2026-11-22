@@ -25,16 +25,16 @@ export const navManagement: NavManagementItem[] = [
         requiresReadAccess: true,
     },
     {
-        name: "Membros",
-        url: "/membros",
-        icon: UserMultiple02Icon,
-        requiresReadAccess: true,
-    },
-    {
         name: "Cestas e Alimentos",
         url: "/cestas",
         icon: ShoppingBasket03Icon,
         requiresReadAccess: true,
     },
+    {
+        name: "Membros (Assistentes)",
+        url: "/membros",
+        icon: UserMultiple02Icon,
+        requiresReadAccess: true,
+    }
 
 ];
