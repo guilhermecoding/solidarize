@@ -213,6 +213,11 @@ export const searchBeneficiariesSchema = z.object({
     query: z.string().trim().min(1).max(120),
 });
 
+export const searchBeneficiaryPlacesSchema = z.object({
+    field: z.enum(["neighborhood", "city"]),
+    query: z.string().trim().min(1).max(120),
+});
+
 export const deleteBeneficiarySchema = z.object({
     id: z.string().min(1, "Beneficiário inválido."),
     password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres."),

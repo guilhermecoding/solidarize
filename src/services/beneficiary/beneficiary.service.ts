@@ -232,6 +232,78 @@ export async function searchBeneficiaries(query: string): Promise<BeneficiaryRec
     return beneficiaries.map(toBeneficiary);
 }
 
+/**
+ * Busca bairros ou cidades distintos já cadastrados para sugestão em formulário,
+ * ignorando acentuação e diferença entre maiúsculas e minúsculas.
+ */
+export async function searchBeneficiaryPlaces(
+    field: "neighborhood" | "city",
+    query: string,
+): Promise<string[]> {
+    "use cache";
+    cacheTag(BENEFICIARY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const normalized = query.trim().replace(/\s+/g, " ");
+    const words = normalized.split(" ").filter(Boolean);
+
+    if (words.length === 0) {
+        return [];
+    }
+
+    const beneficiaryCol = field === "neighborhood" ? Prisma.sql`b.neighborhood` : Prisma.sql`b.city`;
+    const memberCol = field === "neighborhood" ? Prisma.sql`m.neighborhood` : Prisma.sql`m.city`;
+
+    const beneficiaryMatches = Prisma.join(
+        words.map((word) => placeLike(beneficiaryCol, word)),
+        " AND ",
+    );
+    const memberMatches = Prisma.join(
+        words.map((word) => placeLike(memberCol, word)),
+        " AND ",
+    );
+    const prefixPattern = Prisma.sql`("system-auth".immutable_unaccent(lower(${escapeLike(normalized)})) || '%')`;
+
+    const rows = await prisma.$queryRaw<Array<{ value: string }>>`
+        WITH matches AS (
+            SELECT trim(${beneficiaryCol}) AS value
+            FROM "public"."beneficiary" b
+            WHERE ${beneficiaryCol} IS NOT NULL
+              AND trim(${beneficiaryCol}) <> ''
+              AND ${beneficiaryMatches}
+            UNION ALL
+            SELECT trim(${memberCol}) AS value
+            FROM "public"."family_member" m
+            WHERE ${memberCol} IS NOT NULL
+              AND trim(${memberCol}) <> ''
+              AND ${memberMatches}
+        )
+        SELECT value
+        FROM (
+            SELECT
+                value,
+                count(*) AS freq,
+                row_number() OVER (
+                    PARTITION BY "system-auth".immutable_unaccent(lower(value))
+                    ORDER BY count(*) DESC, value ASC
+                ) AS rn
+            FROM matches
+            GROUP BY value
+        ) ranked
+        WHERE rn = 1
+        ORDER BY
+            CASE
+                WHEN "system-auth".immutable_unaccent(lower(value)) LIKE ${prefixPattern} ESCAPE ${LIKE_ESCAPE} THEN 0
+                ELSE 1
+            END,
+            freq DESC,
+            value ASC
+        LIMIT 10
+    `;
+
+    return rows.map((row) => row.value);
+}
+
 export async function getBeneficiary(id: string): Promise<BeneficiaryRecord | null> {
     "use cache";
     cacheTag(BENEFICIARY_CACHE_TAG);
@@ -807,6 +879,12 @@ function nameLike(column: "b.name" | "m.name", word: string) {
     }
 
     return Prisma.sql`"system-auth".immutable_unaccent(lower(m.name)) LIKE ${pattern} ESCAPE ${LIKE_ESCAPE}`;
+}
+
+function placeLike(column: Prisma.Sql, word: string) {
+    const pattern = Prisma.sql`('%' || "system-auth".immutable_unaccent(lower(${escapeLike(word)})) || '%')`;
+
+    return Prisma.sql`"system-auth".immutable_unaccent(lower(${column})) LIKE ${pattern} ESCAPE ${LIKE_ESCAPE}`;
 }
 
 function escapeLike(value: string): string {

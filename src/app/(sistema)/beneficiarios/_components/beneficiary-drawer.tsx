@@ -1,12 +1,14 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Autocomplete } from "@base-ui/react/autocomplete";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useAction } from "next-safe-action/hooks";
 import {
     createBeneficiaryAction,
     deleteBeneficiaryAction,
+    searchBeneficiaryPlacesAction,
     updateBeneficiaryAction,
 } from "@/app/(sistema)/beneficiarios/action";
 import { AssistantLinker, AssistantPicker } from "@/app/(sistema)/beneficiarios/_components/assistant-linker";
@@ -52,6 +54,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import Spinner from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -748,8 +751,9 @@ function BeneficiaryForm({
                                 </form.Field>
                                 <form.Field name="neighborhood">
                                     {(field) => (
-                                        <TextField
+                                        <PlaceAutocompleteField
                                             field={field}
+                                            placeField="neighborhood"
                                             label="Bairro"
                                             placeholder="Ex: Centro"
                                             attempts={submissionAttempts}
@@ -759,8 +763,9 @@ function BeneficiaryForm({
                                 </form.Field>
                                 <form.Field name="city">
                                     {(field) => (
-                                        <TextField
+                                        <PlaceAutocompleteField
                                             field={field}
+                                            placeField="city"
                                             label="Cidade"
                                             placeholder="Ex: São Paulo"
                                             attempts={submissionAttempts}
@@ -1332,12 +1337,24 @@ function FamilyMemberFields({
                 </form.Field>
                 <form.Field name={`members[${index}].neighborhood`}>
                     {(field) => (
-                        <TextField field={field} label="Bairro" placeholder="Ex: Centro" attempts={attempts} />
+                        <PlaceAutocompleteField
+                            field={field}
+                            placeField="neighborhood"
+                            label="Bairro"
+                            placeholder="Ex: Centro"
+                            attempts={attempts}
+                        />
                     )}
                 </form.Field>
                 <form.Field name={`members[${index}].city`}>
                     {(field) => (
-                        <TextField field={field} label="Cidade" placeholder="Ex: São Paulo" attempts={attempts} />
+                        <PlaceAutocompleteField
+                            field={field}
+                            placeField="city"
+                            label="Cidade"
+                            placeholder="Ex: São Paulo"
+                            attempts={attempts}
+                        />
                     )}
                 </form.Field>
                 <form.Field name={`members[${index}].state`}>
@@ -1470,6 +1487,174 @@ function TextField({
                 aria-invalid={invalid || undefined}
                 {...inputProps}
             />
+            <FieldError errors={errors} />
+        </Field>
+    );
+}
+
+const PLACE_SEARCH_DEBOUNCE_MS = 250;
+
+function PlaceAutocompleteField({
+    field,
+    placeField,
+    label,
+    attempts,
+    placeholder,
+    required = false,
+}: {
+    field: TextFieldApi;
+    placeField: "neighborhood" | "city";
+    label: string;
+    attempts: number;
+    placeholder?: string;
+    required?: boolean;
+}) {
+    const [suggestions, setSuggestions] = useState<string[]>([]);
+    const [open, setOpen] = useState(false);
+    const [isSearching, setIsSearching] = useState(false);
+    const timerRef = useRef<number | null>(null);
+    const requestId = useRef(0);
+
+    const errors = visibleErrors(field, attempts);
+    const invalid = errors.length > 0;
+
+    function clearTimer() {
+        if (timerRef.current !== null) {
+            window.clearTimeout(timerRef.current);
+            timerRef.current = null;
+        }
+    }
+
+    useEffect(() => {
+        return () => {
+            clearTimer();
+            requestId.current += 1;
+        };
+    }, []);
+
+    function handleValueChange(
+        nextValue: string,
+        details: { reason: string },
+    ) {
+        field.handleChange(nextValue);
+
+        if (details.reason === "item-press") {
+            clearTimer();
+            requestId.current += 1;
+            setIsSearching(false);
+            setOpen(false);
+            return;
+        }
+
+        const trimmed = nextValue.trim().replace(/\s+/g, " ");
+        clearTimer();
+
+        if (!trimmed) {
+            requestId.current += 1;
+            setIsSearching(false);
+            setSuggestions([]);
+            setOpen(false);
+            return;
+        }
+
+        const id = ++requestId.current;
+        setIsSearching(true);
+        timerRef.current = window.setTimeout(() => {
+            void searchBeneficiaryPlacesAction({
+                field: placeField,
+                query: trimmed,
+            })
+                .then((result) => {
+                    if (id !== requestId.current) {
+                        return;
+                    }
+
+                    const items = result?.data ?? [];
+                    setSuggestions(items);
+                    setOpen(items.length > 0);
+                })
+                .catch(() => {
+                    if (id !== requestId.current) {
+                        return;
+                    }
+
+                    setSuggestions([]);
+                    setOpen(false);
+                })
+                .finally(() => {
+                    if (id === requestId.current) {
+                        setIsSearching(false);
+                    }
+                });
+        }, PLACE_SEARCH_DEBOUNCE_MS);
+    }
+
+    return (
+        <Field data-invalid={invalid || undefined}>
+            <div className="flex items-center gap-2">
+                <FieldLabel htmlFor={field.name} required={required}>{label}</FieldLabel>
+            </div>
+            <Autocomplete.Root
+                value={field.state.value}
+                items={suggestions}
+                mode="none"
+                open={open && suggestions.length > 0}
+                onOpenChange={(nextOpen) => {
+                    if (!nextOpen) {
+                        setOpen(false);
+                        return;
+                    }
+
+                    if (suggestions.length > 0) {
+                        setOpen(true);
+                    }
+                }}
+                onValueChange={handleValueChange}
+            >
+                <div className="relative w-full min-w-0">
+                    <Autocomplete.Input
+                        id={field.name}
+                        name={field.name}
+                        required={required}
+                        placeholder={placeholder}
+                        onBlur={field.handleBlur}
+                        aria-invalid={invalid || undefined}
+                        className={cn(
+                            "h-12 w-full min-w-0 rounded-2xl border border-input bg-input/30 px-5 py-2 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20 md:text-base dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&::-ms-clear]:hidden [&::-ms-reveal]:hidden",
+                            isSearching && "pe-11",
+                        )}
+                    />
+                    {isSearching ? (
+                        <span className="pointer-events-none absolute inset-y-0 inset-e-0 z-10 flex items-center pe-4 text-muted-foreground">
+                            <Spinner className="size-4" />
+                        </span>
+                    ) : null}
+                </div>
+                <Autocomplete.Portal>
+                    <Autocomplete.Positioner
+                        side="bottom"
+                        sideOffset={4}
+                        align="start"
+                        className="isolate z-50"
+                    >
+                        <Autocomplete.Popup
+                            className="relative isolate z-50 max-h-60 w-(--anchor-width) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-2xl bg-popover p-1 text-popover-foreground shadow-2xl ring-1 ring-foreground/5 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
+                        >
+                            <Autocomplete.List className="flex flex-col gap-0.5">
+                                {suggestions.map((item) => (
+                                    <Autocomplete.Item
+                                        key={item}
+                                        value={item}
+                                        className="relative flex w-full cursor-default items-center gap-2 rounded-xl px-3 py-2 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground"
+                                    >
+                                        {item}
+                                    </Autocomplete.Item>
+                                ))}
+                            </Autocomplete.List>
+                        </Autocomplete.Popup>
+                    </Autocomplete.Positioner>
+                </Autocomplete.Portal>
+            </Autocomplete.Root>
             <FieldError errors={errors} />
         </Field>
     );

@@ -8,12 +8,14 @@ import {
     createBeneficiary,
     deleteBeneficiary,
     searchBeneficiaries,
+    searchBeneficiaryPlaces,
     updateBeneficiary,
 } from "@/services/beneficiary/beneficiary.service";
 import {
     beneficiaryFormSchema,
     deleteBeneficiarySchema,
     searchBeneficiariesSchema,
+    searchBeneficiaryPlacesSchema,
     toBeneficiaryInput,
     updateBeneficiarySchema,
 } from "./schema";
@@ -32,6 +34,15 @@ export const searchBeneficiariesAction = beneficiaryReadActionClient
     .inputSchema(searchBeneficiariesSchema)
     .action(async ({ parsedInput }) => {
         return searchBeneficiaries(parsedInput.query.replace(/\s+/g, " "));
+    });
+
+export const searchBeneficiaryPlacesAction = beneficiaryReadActionClient
+    .inputSchema(searchBeneficiaryPlacesSchema)
+    .action(async ({ parsedInput }) => {
+        return searchBeneficiaryPlaces(
+            parsedInput.field,
+            parsedInput.query.replace(/\s+/g, " "),
+        );
     });
 
 export const createBeneficiaryAction = beneficiaryWriteActionClient
