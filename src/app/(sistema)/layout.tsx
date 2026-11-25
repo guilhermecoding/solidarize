@@ -1,23 +1,25 @@
 import { Suspense } from "react";
 
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import {
     MobileBottomNavLoader,
     MobileBottomNavSkeleton,
 } from "@/components/mobile-bottom-nav-loader";
-import { SidebarInset } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export default function SystemLayout({ children }: LayoutProps<"/">) {
     return (
-        <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-                {children}
-            </SidebarInset>
-            <Suspense fallback={<MobileBottomNavSkeleton />}>
-                <MobileBottomNavLoader />
-            </Suspense>
-        </SidebarProvider>
+        <TooltipProvider delay={150}>
+            <SidebarProvider>
+                <AppSidebar />
+                <SidebarInset>
+                    {children}
+                </SidebarInset>
+                <Suspense fallback={<MobileBottomNavSkeleton />}>
+                    <MobileBottomNavLoader />
+                </Suspense>
+            </SidebarProvider>
+        </TooltipProvider>
     );
 }

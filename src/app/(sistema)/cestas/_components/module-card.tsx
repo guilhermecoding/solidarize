@@ -5,6 +5,7 @@ import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 
 import type { HubAction, ModuleItem } from "@/app/(sistema)/cestas/_config/modules";
+import { ReadOnlyTooltip } from "@/components/shared/read-only-tooltip";
 import { cn } from "@/lib/utils";
 
 const baseCardClassName =
@@ -41,14 +42,32 @@ export function ModuleCard({
     );
 
     if (item.kind === "action") {
+        if (!canWrite) {
+            return (
+                <ReadOnlyTooltip className="block h-full w-full rounded-2xl">
+                    <button
+                        type="button"
+                        disabled
+                        tabIndex={-1}
+                        aria-disabled="true"
+                        className={cn(
+                            baseCardClassName,
+                            "pointer-events-none w-full text-left opacity-50",
+                        )}
+                    >
+                        {content}
+                    </button>
+                </ReadOnlyTooltip>
+            );
+        }
+
         return (
             <button
                 type="button"
-                disabled={!canWrite}
                 onClick={() => onAction?.(item.action)}
                 className={cn(
                     baseCardClassName,
-                    "w-full cursor-pointer text-left disabled:pointer-events-none disabled:opacity-50",
+                    "w-full cursor-pointer text-left",
                 )}
             >
                 {content}
