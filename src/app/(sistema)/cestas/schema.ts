@@ -150,6 +150,11 @@ export const withdrawBasketsSchema = z.intersection(
     withdrawalRecipientSchema,
 );
 
+export const withdrawAssistedBasketsSchema = z.object({
+    beneficiaryId: z.string().trim().min(1, "Selecione um beneficiário."),
+    items: withdrawBasketItemsSchema,
+});
+
 const withdrawFoodItemSchema = z.object({
     foodId: z.string().trim().min(1, "Alimento inválido."),
     quantity: z.number().int("Informe uma quantidade inteira.").min(1, "A quantidade mínima é 1."),
@@ -189,6 +194,7 @@ export type UpdateBasketTemplateFormValues = z.infer<typeof updateBasketTemplate
 export type CreateFoodFormValues = z.infer<typeof createFoodSchema>;
 export type UpdateFoodFormValues = z.infer<typeof updateFoodSchema>;
 export type WithdrawBasketsFormValues = z.infer<typeof withdrawBasketsSchema>;
+export type WithdrawAssistedBasketsFormValues = z.infer<typeof withdrawAssistedBasketsSchema>;
 export type WithdrawFoodsFormValues = z.infer<typeof withdrawFoodsSchema>;
 
 export const emptyCreateBasketFormValues: CreateBasketFormValues = {

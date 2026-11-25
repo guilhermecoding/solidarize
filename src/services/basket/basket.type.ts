@@ -73,3 +73,26 @@ export type WithdrawBasketsInput =
         beneficiaryId?: string;
         justification: string;
     };
+
+export type WithdrawAssistedBasketsInput = {
+    beneficiaryId: string;
+    items: WithdrawBasketItemInput[];
+};
+
+export type BeneficiaryDeliveryItemRecord = {
+    id: string;
+    quantity: number;
+    basketName: string;
+    templateLabel: string | null;
+    createdByName: string;
+    createdAtLabel: string;
+    monthKey: string;
+    monthLabel: string;
+};
+
+export type BeneficiaryDeliveryPage = {
+    items: BeneficiaryDeliveryItemRecord[];
+    total: number;
+    page: number;
+    pageCount: number;
+};

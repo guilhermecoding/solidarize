@@ -3,6 +3,7 @@
 import { revalidatePath, updateTag } from "next/cache";
 
 import { readActionClient, writeActionClient } from "@/lib/safe-action";
+import { BENEFICIARY_CACHE_TAG } from "@/services/beneficiary/beneficiary.service";
 import { USER_CACHE_TAG, createMember, deleteMember, searchMembers, setMemberPassword, updateMember } from "@/services/user/user.service";
 import { deleteMemberSchema, memberFormSchema, searchMembersSchema, setMemberPasswordSchema, updateMemberSchema } from "./schema";
 
@@ -32,6 +33,7 @@ export const updateMemberAction = writeActionClient
 
         if (result.ok) {
             updateTag(USER_CACHE_TAG);
+            updateTag(BENEFICIARY_CACHE_TAG);
             revalidatePath("/membros");
         }
 
@@ -45,6 +47,7 @@ export const deleteMemberAction = writeActionClient
 
         if (result.ok) {
             updateTag(USER_CACHE_TAG);
+            updateTag(BENEFICIARY_CACHE_TAG);
             revalidatePath("/membros");
         }
 

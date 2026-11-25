@@ -8,6 +8,7 @@ import {
     createBasketSchema,
     updateBasketSchema,
     updateBasketTemplateSchema,
+    withdrawAssistedBasketsSchema,
     withdrawBasketsSchema,
 } from "@/app/(sistema)/cestas/schema";
 import { Prisma } from "@/generated/prisma/client";
@@ -16,16 +17,20 @@ import {
     formatDateTimeBr,
     getBrazilDateKey,
     getHistoryDayGroup,
+    getHistoryMonthGroup,
 } from "@/lib/date-br";
 import prisma from "@/lib/prisma";
 import { verifyAdminPassword } from "@/lib/verify-admin-password";
 import type {
     BasketRecord,
     BasketTemplateRecord,
+    BeneficiaryDeliveryPage,
     CreateBasketInput,
     CreateBasketTemplateInput,
     UpdateBasketInput,
     UpdateBasketTemplateInput,
+    WithdrawAssistedBasketsInput,
+    WithdrawBasketItemInput,
     WithdrawBasketsInput,
 } from "@/services/basket/basket.type";
 import {
@@ -722,7 +727,6 @@ export async function withdrawBaskets(
     }
 
     const data = parsed.data;
-    const basketIds = data.items.map((item) => item.basketId);
 
     try {
         await prisma.$transaction(async (tx) => {
@@ -750,59 +754,13 @@ export async function withdrawBaskets(
                 justification = data.justification.trim();
             }
 
-            const baskets = await tx.basket.findMany({
-                where: { id: { in: basketIds } },
-                select: {
-                    id: true,
-                    name: true,
-                    quantity: true,
-                },
+            await executeBasketStockWithdrawal(tx, {
+                items: data.items,
+                beneficiaryId,
+                beneficiaryName,
+                justification,
+                actor,
             });
-
-            if (baskets.length !== basketIds.length) {
-                throw new InventoryRuleError("Uma ou mais cestas selecionadas não existem mais.");
-            }
-
-            const basketMap = new Map(baskets.map((basket) => [basket.id, basket]));
-
-            for (const item of data.items) {
-                const basket = basketMap.get(item.basketId);
-
-                if (!basket) {
-                    throw new InventoryRuleError("Uma ou mais cestas selecionadas não existem mais.");
-                }
-
-                const updated = await tx.basket.updateMany({
-                    where: {
-                        id: basket.id,
-                        quantity: { gte: item.quantity },
-                    },
-                    data: {
-                        quantity: { decrement: item.quantity },
-                    },
-                });
-
-                if (updated.count === 0) {
-                    throw new InventoryRuleError(
-                        `Estoque insuficiente para a cesta "${basket.name}". Disponível: ${basket.quantity}.`,
-                    );
-                }
-
-                await tx.basketHistory.create({
-                    data: {
-                        basketId: basket.id,
-                        basketName: basket.name,
-                        type: "out",
-                        quantity: item.quantity,
-                        description: formatBasketWithdrawalDescription(item.quantity, beneficiaryName),
-                        beneficiaryId,
-                        beneficiaryName,
-                        justification,
-                        createdById: actor.id,
-                        createdByName: actor.name,
-                    },
-                });
-            }
         });
 
         const totalUnits = data.items.reduce((sum, item) => sum + item.quantity, 0);
@@ -818,6 +776,204 @@ export async function withdrawBaskets(
 
         throw error;
     }
+}
+
+/**
+ * Registra a retirada de cestas realizada por um membro/admin vinculado a um beneficiário aprovado na seção Para Você.
+ */
+export async function withdrawAssistedBaskets(
+    actor: InventoryActor,
+    input: WithdrawAssistedBasketsInput,
+): Promise<ServerResponse> {
+    const parsed = withdrawAssistedBasketsSchema.safeParse(input);
+
+    if (!parsed.success) {
+        return serverFailure(parsed.error.issues[0]?.message ?? "Dados inválidos.");
+    }
+
+    const data = parsed.data;
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            const beneficiary = await tx.beneficiary.findFirst({
+                where: {
+                    id: data.beneficiaryId,
+                    assistants: { some: { userId: actor.id } },
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    status: true,
+                },
+            });
+
+            if (!beneficiary) {
+                throw new InventoryRuleError("Você não tem vínculo com o beneficiário selecionado.");
+            }
+
+            if (beneficiary.status !== "approved") {
+                throw new InventoryRuleError("Apenas beneficiários aprovados podem receber cestas.");
+            }
+
+            await executeBasketStockWithdrawal(tx, {
+                items: data.items,
+                beneficiaryId: beneficiary.id,
+                beneficiaryName: beneficiary.name,
+                justification: null,
+                actor,
+            });
+        });
+
+        const totalUnits = data.items.reduce((sum, item) => sum + item.quantity, 0);
+        const message = totalUnits === 1
+            ? "Retirada de 1 cesta registrada com sucesso."
+            : `Retirada de ${totalUnits} cestas registrada com sucesso.`;
+
+        return serverSuccess(undefined, message);
+    } catch (error) {
+        if (error instanceof InventoryRuleError) {
+            return serverFailure(error.message);
+        }
+
+        throw error;
+    }
+}
+
+async function executeBasketStockWithdrawal(
+    tx: Prisma.TransactionClient,
+    {
+        items,
+        beneficiaryId,
+        beneficiaryName,
+        justification,
+        actor,
+    }: {
+        items: WithdrawBasketItemInput[];
+        beneficiaryId: string | null;
+        beneficiaryName: string | null;
+        justification: string | null;
+        actor: InventoryActor;
+    },
+) {
+    const basketIds = items.map((item) => item.basketId);
+
+    const baskets = await tx.basket.findMany({
+        where: { id: { in: basketIds } },
+        select: {
+            id: true,
+            name: true,
+            quantity: true,
+        },
+    });
+
+    if (baskets.length !== basketIds.length) {
+        throw new InventoryRuleError("Uma ou mais cestas selecionadas não existem mais.");
+    }
+
+    const basketMap = new Map(baskets.map((basket) => [basket.id, basket]));
+
+    for (const item of items) {
+        const basket = basketMap.get(item.basketId);
+
+        if (!basket) {
+            throw new InventoryRuleError("Uma ou mais cestas selecionadas não existem mais.");
+        }
+
+        const updated = await tx.basket.updateMany({
+            where: {
+                id: basket.id,
+                quantity: { gte: item.quantity },
+            },
+            data: {
+                quantity: { decrement: item.quantity },
+            },
+        });
+
+        if (updated.count === 0) {
+            throw new InventoryRuleError(
+                `Estoque insuficiente para a cesta "${basket.name}". Disponível: ${basket.quantity}.`,
+            );
+        }
+
+        await tx.basketHistory.create({
+            data: {
+                basketId: basket.id,
+                basketName: basket.name,
+                type: "out",
+                quantity: item.quantity,
+                description: formatBasketWithdrawalDescription(item.quantity, beneficiaryName),
+                beneficiaryId,
+                beneficiaryName,
+                justification,
+                createdById: actor.id,
+                createdByName: actor.name,
+            },
+        });
+    }
+}
+
+/**
+ * Lista o histórico paginado de entregas de cestas realizadas para um beneficiário específico (10 por página).
+ */
+export async function listBeneficiaryBasketDeliveriesPage({
+    beneficiaryId,
+    page,
+    pageSize = DEFAULT_HISTORY_PAGE_SIZE,
+}: {
+    beneficiaryId: string;
+    page: number;
+    pageSize?: number;
+}): Promise<BeneficiaryDeliveryPage> {
+    "use cache";
+    cacheTag(BASKET_HISTORY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const referenceDateKey = getBrazilDateKey(new Date());
+    const where = {
+        beneficiaryId,
+        type: "out",
+    } satisfies Prisma.BasketHistoryWhereInput;
+
+    const total = await prisma.basketHistory.count({ where });
+    const pageCount = Math.max(1, Math.ceil(total / pageSize));
+    const currentPage = Math.min(Math.max(1, page), pageCount);
+
+    const rows = await prisma.basketHistory.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (currentPage - 1) * pageSize,
+        take: pageSize,
+        include: {
+            basket: {
+                select: {
+                    deletedTemplateName: true,
+                    template: {
+                        select: { name: true },
+                    },
+                },
+            },
+        },
+    });
+
+    return {
+        items: rows.map((row) => {
+            const monthGroup = getHistoryMonthGroup(row.createdAt, referenceDateKey);
+
+            return {
+                id: row.id,
+                quantity: row.quantity,
+                basketName: row.basketName,
+                templateLabel: row.basket?.template?.name ?? row.basket?.deletedTemplateName ?? null,
+                createdByName: row.createdByName,
+                createdAtLabel: formatDateTimeBr(row.createdAt),
+                monthKey: monthGroup.key,
+                monthLabel: monthGroup.label,
+            };
+        }),
+        total,
+        page: currentPage,
+        pageCount,
+    };
 }
 
 /**

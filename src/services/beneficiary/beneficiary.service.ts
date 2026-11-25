@@ -27,6 +27,7 @@ import {
     cpfTakenMessage,
     CPF_TAKEN_MESSAGE,
     type AidType,
+    type AssistedBeneficiarySummary,
     type BeneficiaryGender,
     type BeneficiaryInput,
     type BeneficiaryOptionRecord,
@@ -175,6 +176,75 @@ export async function listBeneficiaryOptions(): Promise<BeneficiaryOptionRecord[
         state: row.state,
         status: isBeneficiaryStatus(row.status) ? row.status : "rejected",
     }));
+}
+
+/**
+ * Lista os beneficiários vinculados a um assistente específico em ordem alfabética.
+ */
+export async function listAssistedBeneficiaries(
+    userId: string,
+    options?: { approvedOnly?: boolean },
+): Promise<AssistedBeneficiarySummary[]> {
+    "use cache";
+    cacheTag(BENEFICIARY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const approvedOnly = options?.approvedOnly ?? false;
+
+    const rows = await prisma.beneficiary.findMany({
+        where: {
+            assistants: { some: { userId } },
+            ...(approvedOnly ? { status: "approved" } : {}),
+        },
+        orderBy: { name: "asc" },
+        select: {
+            id: true,
+            name: true,
+            cpf: true,
+            dateOfBirth: true,
+            neighborhood: true,
+            city: true,
+            state: true,
+            status: true,
+            _count: {
+                select: { members: true },
+            },
+        },
+    });
+
+    return rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        cpf: row.cpf ? formatCpf(row.cpf) : "",
+        ageLabel: formatAge(row.dateOfBirth),
+        neighborhood: row.neighborhood,
+        city: row.city,
+        state: row.state,
+        status: isBeneficiaryStatus(row.status) ? row.status : "rejected",
+        membersCount: row._count.members,
+    }));
+}
+
+/**
+ * Busca um beneficiário específico somente se ele estiver vinculado ao assistente informado.
+ */
+export async function getAssistedBeneficiary(
+    userId: string,
+    beneficiaryId: string,
+): Promise<BeneficiaryRecord | null> {
+    "use cache";
+    cacheTag(BENEFICIARY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const beneficiary = await prisma.beneficiary.findFirst({
+        where: {
+            id: beneficiaryId,
+            assistants: { some: { userId } },
+        },
+        include: beneficiaryInclude,
+    });
+
+    return beneficiary ? toBeneficiary(beneficiary) : null;
 }
 
 export async function searchBeneficiaries(query: string): Promise<BeneficiaryRecord[]> {

@@ -5,7 +5,7 @@ import {
     PieChartIcon,
     ServiceIcon,
     ShoppingBasket03Icon,
-    ShoppingBasketFavorite03Icon, UserMultiple02Icon
+    ShoppingBasketCheckOut03Icon, UserMultiple02Icon
 } from "@hugeicons/core-free-icons";
 
 import type { NavSectionGroup, NavSectionItem } from "@/components/nav-management";
@@ -62,16 +62,16 @@ export const navManagement: NavSectionGroup[] = [
         mobileUrl: "/para-voce",
         items: [
             {
-                name: "Minhas Famílias",
-                url: "/familias",
-                icon: HealtcareIcon,
-                requiresReadAccess: true,
+                name: "Retirar Cesta",
+                url: "/retirar-cesta",
+                icon: ShoppingBasketCheckOut03Icon,
+                requiresReadAccess: false,
             },
             {
-                name: "Cestas de Alimentação",
-                url: "/cestas-alimentacao",
-                icon: ShoppingBasketFavorite03Icon,
-                requiresReadAccess: true,
+                name: "Minhas Famílias",
+                url: "/minhas-familias",
+                icon: HealtcareIcon,
+                requiresReadAccess: false,
             },
         ],
     }

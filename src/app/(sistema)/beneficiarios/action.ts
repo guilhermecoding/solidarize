@@ -24,9 +24,12 @@ function refreshBeneficiaries(id?: string) {
     updateTag(BENEFICIARY_CACHE_TAG);
     revalidatePath("/beneficiarios");
     revalidatePath("/cestas");
+    revalidatePath("/retirar-cesta");
+    revalidatePath("/minhas-familias");
 
     if (id) {
         revalidatePath(`/beneficiarios/${id}`);
+        revalidatePath(`/minhas-familias/${id}`);
     }
 }
 

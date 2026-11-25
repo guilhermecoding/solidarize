@@ -349,6 +349,18 @@ export type BeneficiaryOptionRecord = {
     status: BeneficiaryStatus;
 };
 
+export type AssistedBeneficiarySummary = {
+    id: string;
+    name: string;
+    cpf: string;
+    ageLabel: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    status: BeneficiaryStatus;
+    membersCount: number;
+};
+
 export type BeneficiaryRecord = {
     id: string;
     name: string;
