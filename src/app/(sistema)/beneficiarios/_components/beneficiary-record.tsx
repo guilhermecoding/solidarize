@@ -13,8 +13,10 @@ import {
     aidTypeLabels,
     beneficiaryGenderLabels,
     beneficiaryStatusLabels,
+    disabilityLabels,
     employmentLabels,
     maritalStatusLabels,
+    rentLabels,
     type BeneficiaryRecord,
 } from "@/services/beneficiary/beneficiary.type";
 
@@ -22,10 +24,19 @@ const EMPTY = "Não informado";
 
 export function BeneficiaryRecordView({
     beneficiary,
+    excludeAssistantId,
+    assistantsTitle = "Assistentes vinculados",
+    emptyAssistantsText = "Nenhum assistente vinculado",
 }: {
     beneficiary: BeneficiaryRecord;
+    excludeAssistantId?: string;
+    assistantsTitle?: string;
+    emptyAssistantsText?: string;
 }) {
     const rows = titularRows(beneficiary);
+    const assistants = excludeAssistantId
+        ? beneficiary.assistants.filter((assistant) => assistant.id !== excludeAssistantId)
+        : beneficiary.assistants;
 
     return (
         <div className="flex flex-col gap-8">
@@ -106,9 +117,9 @@ export function BeneficiaryRecordView({
                 )}
             </section>
             <section className="flex flex-col gap-3">
-                <h2 className="text-lg font-medium">Assistentes vinculados</h2>
-                {beneficiary.assistants.length === 0 ? (
-                    <p className="text-muted-foreground">Nenhum assistente vinculado</p>
+                <h2 className="text-lg font-medium">{assistantsTitle}</h2>
+                {assistants.length === 0 ? (
+                    <p className="text-muted-foreground">{emptyAssistantsText}</p>
                 ) : (
                     <div className="overflow-hidden rounded-xl border bg-background">
                         <Table>
@@ -118,7 +129,7 @@ export function BeneficiaryRecordView({
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {beneficiary.assistants.map((assistant) => (
+                                {assistants.map((assistant) => (
                                     <TableRow
                                         key={assistant.id}
                                         className="odd:bg-background even:bg-muted/50"
@@ -172,6 +183,8 @@ function titularRows(
             value: beneficiaryStatusLabels[beneficiary.status],
         },
         { label: "Tipo de Auxílio", value: aidTypeLabels[beneficiary.aidType] },
+        { label: "Deficiência", value: disabilityLabels[beneficiary.disability] },
+        { label: "Aluguel", value: rentLabels[beneficiary.rent] },
         { label: "Observações", value: text(beneficiary.notes) },
     ];
 }

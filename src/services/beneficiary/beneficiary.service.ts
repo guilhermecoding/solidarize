@@ -18,22 +18,27 @@ import {
     isBeneficiaryGender,
     isBeneficiaryStatus,
     isBrazilianState,
+    isDisabilityOption,
     isEmployment,
     isKinship,
     isMaritalStatus,
+    isRentOption,
     kinshipLabel,
     cpfTakenMessage,
     CPF_TAKEN_MESSAGE,
     type AidType,
+    type AssistedBeneficiarySummary,
     type BeneficiaryGender,
     type BeneficiaryInput,
     type BeneficiaryOptionRecord,
     type BeneficiaryRecord,
     type BeneficiaryStatus,
+    type DisabilityOption,
     type Employment,
     type FamilyMemberRecord,
     type Kinship,
     type MaritalStatus,
+    type RentOption,
     type UpdateBeneficiaryInput,
 } from "@/services/beneficiary/beneficiary.type";
 
@@ -88,6 +93,8 @@ type PreparedMember = {
     notes: string | null;
     status: BeneficiaryStatus | null;
     aidType: AidType | null;
+    disability: DisabilityOption | null;
+    rent: RentOption | null;
     contacts: PreparedContact[];
 };
 
@@ -108,6 +115,8 @@ type PreparedBeneficiary = {
     notes: string | null;
     status: BeneficiaryStatus;
     aidType: AidType;
+    disability: DisabilityOption;
+    rent: RentOption;
     contacts: PreparedContact[];
     members: PreparedMember[];
     assistantIds: string[];
@@ -169,6 +178,75 @@ export async function listBeneficiaryOptions(): Promise<BeneficiaryOptionRecord[
     }));
 }
 
+/**
+ * Lista os beneficiários vinculados a um assistente específico em ordem alfabética.
+ */
+export async function listAssistedBeneficiaries(
+    userId: string,
+    options?: { approvedOnly?: boolean },
+): Promise<AssistedBeneficiarySummary[]> {
+    "use cache";
+    cacheTag(BENEFICIARY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const approvedOnly = options?.approvedOnly ?? false;
+
+    const rows = await prisma.beneficiary.findMany({
+        where: {
+            assistants: { some: { userId } },
+            ...(approvedOnly ? { status: "approved" } : {}),
+        },
+        orderBy: { name: "asc" },
+        select: {
+            id: true,
+            name: true,
+            cpf: true,
+            dateOfBirth: true,
+            neighborhood: true,
+            city: true,
+            state: true,
+            status: true,
+            _count: {
+                select: { members: true },
+            },
+        },
+    });
+
+    return rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        cpf: row.cpf ? formatCpf(row.cpf) : "",
+        ageLabel: formatAge(row.dateOfBirth),
+        neighborhood: row.neighborhood,
+        city: row.city,
+        state: row.state,
+        status: isBeneficiaryStatus(row.status) ? row.status : "rejected",
+        membersCount: row._count.members,
+    }));
+}
+
+/**
+ * Busca um beneficiário específico somente se ele estiver vinculado ao assistente informado.
+ */
+export async function getAssistedBeneficiary(
+    userId: string,
+    beneficiaryId: string,
+): Promise<BeneficiaryRecord | null> {
+    "use cache";
+    cacheTag(BENEFICIARY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const beneficiary = await prisma.beneficiary.findFirst({
+        where: {
+            id: beneficiaryId,
+            assistants: { some: { userId } },
+        },
+        include: beneficiaryInclude,
+    });
+
+    return beneficiary ? toBeneficiary(beneficiary) : null;
+}
+
 export async function searchBeneficiaries(query: string): Promise<BeneficiaryRecord[]> {
     "use cache";
     cacheTag(BENEFICIARY_CACHE_TAG);
@@ -222,6 +300,78 @@ export async function searchBeneficiaries(query: string): Promise<BeneficiaryRec
     });
 
     return beneficiaries.map(toBeneficiary);
+}
+
+/**
+ * Busca bairros ou cidades distintos já cadastrados para sugestão em formulário,
+ * ignorando acentuação e diferença entre maiúsculas e minúsculas.
+ */
+export async function searchBeneficiaryPlaces(
+    field: "neighborhood" | "city",
+    query: string,
+): Promise<string[]> {
+    "use cache";
+    cacheTag(BENEFICIARY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const normalized = query.trim().replace(/\s+/g, " ");
+    const words = normalized.split(" ").filter(Boolean);
+
+    if (words.length === 0) {
+        return [];
+    }
+
+    const beneficiaryCol = field === "neighborhood" ? Prisma.sql`b.neighborhood` : Prisma.sql`b.city`;
+    const memberCol = field === "neighborhood" ? Prisma.sql`m.neighborhood` : Prisma.sql`m.city`;
+
+    const beneficiaryMatches = Prisma.join(
+        words.map((word) => placeLike(beneficiaryCol, word)),
+        " AND ",
+    );
+    const memberMatches = Prisma.join(
+        words.map((word) => placeLike(memberCol, word)),
+        " AND ",
+    );
+    const prefixPattern = Prisma.sql`("system-auth".immutable_unaccent(lower(${escapeLike(normalized)})) || '%')`;
+
+    const rows = await prisma.$queryRaw<Array<{ value: string }>>`
+        WITH matches AS (
+            SELECT trim(${beneficiaryCol}) AS value
+            FROM "public"."beneficiary" b
+            WHERE ${beneficiaryCol} IS NOT NULL
+              AND trim(${beneficiaryCol}) <> ''
+              AND ${beneficiaryMatches}
+            UNION ALL
+            SELECT trim(${memberCol}) AS value
+            FROM "public"."family_member" m
+            WHERE ${memberCol} IS NOT NULL
+              AND trim(${memberCol}) <> ''
+              AND ${memberMatches}
+        )
+        SELECT value
+        FROM (
+            SELECT
+                value,
+                count(*) AS freq,
+                row_number() OVER (
+                    PARTITION BY "system-auth".immutable_unaccent(lower(value))
+                    ORDER BY count(*) DESC, value ASC
+                ) AS rn
+            FROM matches
+            GROUP BY value
+        ) ranked
+        WHERE rn = 1
+        ORDER BY
+            CASE
+                WHEN "system-auth".immutable_unaccent(lower(value)) LIKE ${prefixPattern} ESCAPE ${LIKE_ESCAPE} THEN 0
+                ELSE 1
+            END,
+            freq DESC,
+            value ASC
+        LIMIT 10
+    `;
+
+    return rows.map((row) => row.value);
 }
 
 export async function getBeneficiary(id: string): Promise<BeneficiaryRecord | null> {
@@ -503,8 +653,10 @@ function prepareBeneficiary(input: BeneficiaryInput): PreparedBeneficiary | Serv
     const employment = isEmployment(value.employment) ? value.employment : null;
     const status = isBeneficiaryStatus(value.status) ? value.status : null;
     const aidType = isAidType(value.aidType) ? value.aidType : null;
+    const disability = isDisabilityOption(value.disability) ? value.disability : null;
+    const rent = isRentOption(value.rent) ? value.rent : null;
 
-    if (!dateOfBirth || !gender || !maritalStatus || !employment || !status || !aidType || !isBrazilianState(value.state)) {
+    if (!dateOfBirth || !gender || !maritalStatus || !employment || !status || !aidType || !disability || !rent || !isBrazilianState(value.state)) {
         return serverFailure("Dados inválidos.");
     }
 
@@ -525,6 +677,8 @@ function prepareBeneficiary(input: BeneficiaryInput): PreparedBeneficiary | Serv
         notes: emptyToNull(value.notes),
         status,
         aidType,
+        disability,
+        rent,
         contacts: toContacts(value.contacts),
         members: [],
         assistantIds: value.assistantIds,
@@ -561,6 +715,8 @@ function prepareBeneficiary(input: BeneficiaryInput): PreparedBeneficiary | Serv
             notes: emptyToNull(member.notes),
             status: isBeneficiaryStatus(member.status) ? member.status : null,
             aidType: isAidType(member.aidType) ? member.aidType : null,
+            disability: isDisabilityOption(member.disability) ? member.disability : null,
+            rent: isRentOption(member.rent) ? member.rent : null,
             contacts: toContacts(member.contacts),
         });
     }
@@ -585,6 +741,8 @@ function beneficiaryData(prepared: PreparedBeneficiary) {
         notes: prepared.notes,
         status: prepared.status,
         aidType: prepared.aidType,
+        disability: prepared.disability,
+        rent: prepared.rent,
     };
 }
 
@@ -606,6 +764,8 @@ function memberData(member: PreparedMember) {
         notes: member.notes,
         status: member.status,
         aidType: member.aidType,
+        disability: member.disability,
+        rent: member.rent,
     };
 }
 
@@ -682,6 +842,8 @@ function toBeneficiary(row: BeneficiaryRow): BeneficiaryRecord {
     const employment = isEmployment(row.employment) ? row.employment : "unemployed";
     const status = isBeneficiaryStatus(row.status) ? row.status : "rejected";
     const aidType = isAidType(row.aidType) ? row.aidType : "other";
+    const disability = isDisabilityOption(row.disability) ? row.disability : "no";
+    const rent = isRentOption(row.rent) ? row.rent : "no";
 
     return {
         id: row.id,
@@ -702,6 +864,8 @@ function toBeneficiary(row: BeneficiaryRow): BeneficiaryRecord {
         notes: row.notes ?? "",
         status,
         aidType,
+        disability,
+        rent,
         members: row.members.map((member) => toFamilyMember(member)),
         assistants: row.assistants
             .map((assistant) => ({
@@ -753,6 +917,8 @@ function toFamilyMember(row: FamilyMemberRow): FamilyMemberRecord {
         notes: row.notes ?? "",
         status: row.status ?? "",
         aidType: row.aidType ?? "",
+        disability: row.disability ?? "",
+        rent: row.rent ?? "",
     };
 }
 
@@ -783,6 +949,12 @@ function nameLike(column: "b.name" | "m.name", word: string) {
     }
 
     return Prisma.sql`"system-auth".immutable_unaccent(lower(m.name)) LIKE ${pattern} ESCAPE ${LIKE_ESCAPE}`;
+}
+
+function placeLike(column: Prisma.Sql, word: string) {
+    const pattern = Prisma.sql`('%' || "system-auth".immutable_unaccent(lower(${escapeLike(word)})) || '%')`;
+
+    return Prisma.sql`"system-auth".immutable_unaccent(lower(${column})) LIKE ${pattern} ESCAPE ${LIKE_ESCAPE}`;
 }
 
 function escapeLike(value: string): string {

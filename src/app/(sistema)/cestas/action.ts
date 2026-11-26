@@ -54,6 +54,7 @@ function refreshInventory({
     if (baskets) {
         updateTag(BASKET_CACHE_TAG);
         revalidatePath("/cestas/listar");
+        revalidatePath("/retirar-cesta");
     }
 
     if (templates) {
@@ -64,6 +65,7 @@ function refreshInventory({
     if (basketHistory) {
         updateTag(BASKET_HISTORY_CACHE_TAG);
         revalidatePath("/cestas/historico");
+        revalidatePath("/minhas-familias", "layout");
     }
 
     if (foods) {

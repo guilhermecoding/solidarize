@@ -21,7 +21,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
-export type WithdrawStep = 1 | 2 | 3;
+export type WithdrawStep = number;
 
 type WithdrawShellProps = {
     open: boolean;
@@ -29,7 +29,7 @@ type WithdrawShellProps = {
     title: string;
     description: string;
     step: WithdrawStep;
-    stepLabels: readonly [string, string, string];
+    stepLabels: readonly string[];
     headerExtra?: ReactNode;
     children: ReactNode;
     footer: ReactNode;
@@ -37,7 +37,7 @@ type WithdrawShellProps = {
 };
 
 /**
- * Container responsivo (Dialog no desktop e Drawer no mobile) para fluxos de retirada em 3 etapas.
+ * Container responsivo (Dialog no desktop e Drawer no mobile) para fluxos de retirada em etapas.
  */
 export function WithdrawShell({
     open,
@@ -63,9 +63,15 @@ export function WithdrawShell({
 
     const stepBar = (
         <div className="flex flex-col gap-2 pt-2">
-            <ol aria-label="Etapas da retirada" className="grid grid-cols-3 gap-2">
+            <ol
+                aria-label="Etapas da retirada"
+                className={cn(
+                    "grid gap-2",
+                    stepLabels.length === 2 ? "grid-cols-2" : "grid-cols-3",
+                )}
+            >
                 {stepLabels.map((label, index) => {
-                    const stepNumber = (index + 1) as WithdrawStep;
+                    const stepNumber = index + 1;
                     const isActive = step === stepNumber;
                     const isCompleted = step > stepNumber;
 

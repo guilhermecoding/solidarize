@@ -116,6 +116,8 @@ model Beneficiary {
   notes         String?
   status        String
   aidType       String
+  disability    String
+  rent          String
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
   contacts        BeneficiaryContact[]
@@ -175,6 +177,8 @@ model FamilyMember {
   notes          String?
   status         String?
   aidType        String?
+  disability     String?
+  rent           String?
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
   contacts       FamilyMemberContact[]

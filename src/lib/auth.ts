@@ -54,8 +54,8 @@ export const auth = betterAuth({
     },
     trustedOrigins,
     session: {
-        expiresIn: 60 * 60 * 24 * 7, // 7 dias
-        updateAge: 60 * 60 * 6, // 6 horas
+        expiresIn: 60 * 60 * 24 * 30, // 30 dias
+        disableSessionRefresh: true,
     },
     plugins: [
         admin({

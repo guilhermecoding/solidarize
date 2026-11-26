@@ -42,6 +42,11 @@ export type HistoryDayGroup = {
     label: string;
 };
 
+export type HistoryMonthGroup = {
+    key: string;
+    label: string;
+};
+
 /**
  * Extrai ano, mês, dia, hora e minuto no fuso America/Sao_Paulo.
  */
@@ -217,4 +222,23 @@ export function getHistoryDayGroup(date: Date, referenceDateKey: string): Histor
     }
 
     return { key, label: `${dd} de ${monthName} de ${year}` };
+}
+
+/**
+ * Calcula chave e rótulo de agrupamento mensal para o histórico ("Outubro" no ano atual ou "Outubro de 2025" em outro ano).
+ */
+export function getHistoryMonthGroup(date: Date, referenceDateKey: string): HistoryMonthGroup {
+    const { month, year } = getBrazilDateParts(date);
+    const key = `${year}-${String(month).padStart(2, "0")}`;
+    const [, , refYearStr] = referenceDateKey.split("-");
+    const rawMonthName = MONTH_NAMES[month - 1] ?? "";
+    const monthName = rawMonthName
+        ? rawMonthName.charAt(0).toUpperCase() + rawMonthName.slice(1)
+        : "";
+
+    if (year === Number(refYearStr)) {
+        return { key, label: monthName };
+    }
+
+    return { key, label: `${monthName} de ${year}` };
 }

@@ -8,12 +8,14 @@ import {
     createBeneficiary,
     deleteBeneficiary,
     searchBeneficiaries,
+    searchBeneficiaryPlaces,
     updateBeneficiary,
 } from "@/services/beneficiary/beneficiary.service";
 import {
     beneficiaryFormSchema,
     deleteBeneficiarySchema,
     searchBeneficiariesSchema,
+    searchBeneficiaryPlacesSchema,
     toBeneficiaryInput,
     updateBeneficiarySchema,
 } from "./schema";
@@ -22,9 +24,12 @@ function refreshBeneficiaries(id?: string) {
     updateTag(BENEFICIARY_CACHE_TAG);
     revalidatePath("/beneficiarios");
     revalidatePath("/cestas");
+    revalidatePath("/retirar-cesta");
+    revalidatePath("/minhas-familias");
 
     if (id) {
         revalidatePath(`/beneficiarios/${id}`);
+        revalidatePath(`/minhas-familias/${id}`);
     }
 }
 
@@ -32,6 +37,15 @@ export const searchBeneficiariesAction = beneficiaryReadActionClient
     .inputSchema(searchBeneficiariesSchema)
     .action(async ({ parsedInput }) => {
         return searchBeneficiaries(parsedInput.query.replace(/\s+/g, " "));
+    });
+
+export const searchBeneficiaryPlacesAction = beneficiaryReadActionClient
+    .inputSchema(searchBeneficiaryPlacesSchema)
+    .action(async ({ parsedInput }) => {
+        return searchBeneficiaryPlaces(
+            parsedInput.field,
+            parsedInput.query.replace(/\s+/g, " "),
+        );
     });
 
 export const createBeneficiaryAction = beneficiaryWriteActionClient
