@@ -11,6 +11,17 @@ import { TextAnimate } from "./ui/text-animate";
 const SPLASH_MIN_DURATION_MS = 3400;
 const SPLASH_MAX_WAIT_MS = 5000;
 
+export const SPLASH_DONE_EVENT = "solidarize:splash-done";
+
+function notifySplashDone() {
+    if (typeof window === "undefined") {
+        return;
+    }
+
+    window.__solidarizeSplashDone = true;
+    window.dispatchEvent(new Event(SPLASH_DONE_EVENT));
+}
+
 const logoEntrance: Variants = {
     hidden: { opacity: 0, scale: 0.72, y: 16, filter: "blur(8px)" },
     show: {
@@ -52,6 +63,7 @@ export default function SplashScreen() {
 
     useEffect(() => {
         if (isOfflineRoute) {
+            notifySplashDone();
             return;
         }
 
@@ -66,6 +78,7 @@ export default function SplashScreen() {
 
             dismissed = true;
             setVisible(false);
+            notifySplashDone();
         };
 
         const tryDismiss = () => {

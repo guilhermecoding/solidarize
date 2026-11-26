@@ -5,6 +5,7 @@ import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 import { SerwistProvider } from "@/app/serwist";
 import { OfflineMonitor } from "@/components/offline-monitor";
+import { PwaInstallPrompt } from "@/components/pwa-install-prompt";
 import { cn } from "@/lib/utils";
 import SplashScreen from "@/components/splash-screen";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -34,6 +35,9 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Solidarize",
   },
+  icons: {
+    apple: "/icons/icon-192x192.png",
+  },
   formatDetection: {
     telephone: false,
   },
@@ -57,6 +61,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <Script id="login-default-theme" strategy="beforeInteractive">
           {`(function(){try{var p=location.pathname;if((p==="/entrar"||p.indexOf("/entrar/")===0)&&!localStorage.getItem("theme")){var root=document.documentElement;root.classList.remove("dark");root.classList.add("light");root.style.colorScheme="light"}}catch(e){}})();`}
         </Script>
+        <Script id="pwa-install-capture" strategy="beforeInteractive">
+          {`(function(){window.addEventListener("beforeinstallprompt",function(e){e.preventDefault();window.__solidarizeDeferredInstallPrompt=e;window.dispatchEvent(new Event("solidarize:beforeinstallprompt"));});})();`}
+        </Script>
         <SerwistProvider
           swUrl="/sw.js"
           disable={process.env.NODE_ENV === "development"}
@@ -67,6 +74,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <ThemeProvider>
             <NextTopLoader color="var(--primary)" showSpinner={false} shadow={false} height={3} />
             <SplashScreen />
+            <PwaInstallPrompt />
             {children}
             <Toaster />
           </ThemeProvider>
