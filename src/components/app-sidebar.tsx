@@ -3,12 +3,11 @@ import { Suspense } from "react";
 import Link from "next/link";
 
 import { navPrimary } from "@/app/(sistema)/_config/nav-management";
-import { NavSection } from "@/components/nav-management";
+import { NavSection, type NavSectionGroup } from "@/components/nav-management";
 import {
   NavManagementLoader,
   NavManagementSkeleton,
 } from "@/components/nav-management-loader";
-import { NavSecondary } from "@/components/nav-secondary";
 import { NavUserLoader, NavUserSkeleton } from "@/components/nav-user-loader";
 import {
   Sidebar,
@@ -19,19 +18,17 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { ChartRingIcon } from "@hugeicons/core-free-icons";
+import { InfoIcon } from "@hugeicons/core-free-icons";
 import IconLogo from "./logo/icon-logo";
 import TextLogo from "./logo/text-logo";
 
-const data = {
-  navSecondary: [
+const navSecondary: NavSectionGroup = {
+  items: [
     {
-      title: "Support",
-      url: "#",
-      icon: (
-        <HugeiconsIcon icon={ChartRingIcon} strokeWidth={2} />
-      ),
+      name: "Sobre",
+      url: "/sobre",
+      icon: InfoIcon,
+      requiresReadAccess: false,
     },
   ],
 };
@@ -56,7 +53,7 @@ export function AppSidebar({ ...props }: ComponentProps<typeof Sidebar>) {
         <Suspense fallback={<NavManagementSkeleton />}>
           <NavManagementLoader />
         </Suspense>
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavSection section={navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
         <Suspense fallback={<NavUserSkeleton />}>
