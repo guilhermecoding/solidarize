@@ -1,0 +1,49 @@
+"use client";
+
+import { HugeiconsIcon } from "@hugeicons/react";
+
+import { ModuleCard } from "@/app/(sistema)/cestas/_components/module-card";
+import type { HubAction, ModuleGroup } from "@/app/(sistema)/cestas/_config/modules";
+import Section from "@/components/shared/section";
+import { cn } from "@/lib/utils";
+
+const gridColumns = {
+    3: "sm:grid-cols-2 lg:grid-cols-3",
+    4: "sm:grid-cols-2 xl:grid-cols-4",
+    5: "sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5",
+} as const;
+
+/**
+ * Seção de módulos com cabeçalho e grade responsiva de cards.
+ */
+export function ModuleSection({
+    group,
+    canWrite = true,
+    onAction,
+}: {
+    group: ModuleGroup;
+    canWrite?: boolean;
+    onAction?: (action: HubAction) => void;
+}) {
+    const headingId = `${group.id}-heading`;
+
+    return (
+        <Section aria-labelledby={headingId} className="mt-8 flex flex-col gap-5">
+            <header className="flex flex-col gap-1 border-b pb-4">
+                <div className="flex items-center gap-2">
+                    <HugeiconsIcon icon={group.icon} strokeWidth={2} className="size-5" />
+                    <h2 id={headingId} className="text-lg font-semibold">
+                        {group.title}
+                    </h2>
+                </div>
+            </header>
+            <ul className={cn("grid grid-cols-1 gap-4", gridColumns[group.columns])}>
+                {group.items.map((item) => (
+                    <li key={item.id}>
+                        <ModuleCard item={item} canWrite={canWrite} onAction={onAction} />
+                    </li>
+                ))}
+            </ul>
+        </Section>
+    );
+}

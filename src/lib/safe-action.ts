@@ -1,0 +1,105 @@
+import { headers } from "next/headers";
+import { createSafeActionClient } from "next-safe-action";
+
+import { auth } from "@/lib/auth";
+import { hasReadAccess, hasWriteAccess, isUserBanned } from "@/lib/member-access";
+import { logSafeServerError } from "@/lib/safe-log";
+import type { MemberActor } from "@/services/user/user.type";
+
+export class ActionError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = "ActionError";
+    }
+}
+
+export const actionClient = createSafeActionClient({
+    handleServerError(error) {
+        logSafeServerError("safe-action", error);
+
+        if (error instanceof ActionError) {
+            return error.message;
+        }
+
+        return "Algo deu errado. Tente novamente.";
+    },
+});
+
+export type SessionActor = MemberActor & {
+    name: string;
+};
+
+async function getActor(): Promise<SessionActor | null> {
+    const session = await auth.api.getSession({
+        headers: await headers(),
+    });
+
+    if (!session?.user || isUserBanned(session.user)) {
+        return null;
+    }
+
+    return {
+        id: session.user.id,
+        name: session.user.name,
+        role: session.user.role,
+        permission: session.user.permission,
+    };
+}
+
+export const authActionClient = actionClient.use(async ({ next }) => {
+    const actor = await getActor();
+
+    if (!actor) {
+        throw new ActionError("Você precisa estar autenticado.");
+    }
+
+    return next({ ctx: { actor } });
+});
+
+export const readActionClient = authActionClient.use(async ({ next, ctx }) => {
+    if (!hasReadAccess(ctx.actor)) {
+        throw new ActionError("Você não tem permissão para consultar membros.");
+    }
+
+    return next();
+});
+
+export const writeActionClient = authActionClient.use(async ({ next, ctx }) => {
+    if (!hasWriteAccess(ctx.actor)) {
+        throw new ActionError("Você não tem permissão para alterar membros.");
+    }
+
+    return next();
+});
+
+export const beneficiaryReadActionClient = authActionClient.use(async ({ next, ctx }) => {
+    if (!hasReadAccess(ctx.actor)) {
+        throw new ActionError("Você não tem permissão para consultar beneficiários.");
+    }
+
+    return next();
+});
+
+export const beneficiaryWriteActionClient = authActionClient.use(async ({ next, ctx }) => {
+    if (!hasWriteAccess(ctx.actor)) {
+        throw new ActionError("Você não tem permissão para alterar beneficiários.");
+    }
+
+    return next();
+});
+
+export const inventoryReadActionClient = authActionClient.use(async ({ next, ctx }) => {
+    if (!hasReadAccess(ctx.actor)) {
+        throw new ActionError("Você não tem permissão para consultar cestas e alimentos.");
+    }
+
+    return next();
+});
+
+export const inventoryWriteActionClient = authActionClient.use(async ({ next, ctx }) => {
+    if (!hasWriteAccess(ctx.actor)) {
+        throw new ActionError("Você não tem permissão para alterar cestas e alimentos.");
+    }
+
+    return next();
+});

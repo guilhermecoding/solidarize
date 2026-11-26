@@ -1,0 +1,1102 @@
+import "server-only";
+
+import { cacheLife, cacheTag } from "next/cache";
+
+import { serverFailure, serverSuccess, type ServerFailure, type ServerResponse } from "@/@types/server-response";
+import { Prisma } from "@/generated/prisma/client";
+import { beneficiaryFormSchema } from "@/app/(sistema)/beneficiarios/schema";
+import prisma from "@/lib/prisma";
+import { formatContact, normalizeContact } from "@/lib/validate-contact";
+import { formatCpf, normalizeCpf } from "@/lib/validate-cpf";
+import { formatDateOfBirth, parseBrazilianDate } from "@/lib/validate-date-of-birth";
+import { verifyAdminPassword } from "@/lib/verify-admin-password";
+import { recordAuditLog } from "@/services/audit/audit.service";
+import {
+    formatAge,
+    isAidType,
+    isBeneficiaryGender,
+    isBeneficiaryStatus,
+    isBrazilianState,
+    isDisabilityOption,
+    isEmployment,
+    isKinship,
+    isMaritalStatus,
+    isRentOption,
+    kinshipLabel,
+    parseExpectedDeliveryDay,
+    cpfTakenMessage,
+    CPF_TAKEN_MESSAGE,
+    type AidType,
+    type AssistedBeneficiaryDetail,
+    type AssistedBeneficiarySummary,
+    type AssistedFamilyMemberSummary,
+    type BeneficiaryGender,
+    type BeneficiaryInput,
+    type BeneficiaryOptionRecord,
+    type BeneficiaryRecord,
+    type BeneficiaryStatus,
+    type DisabilityOption,
+    type Employment,
+    type FamilyMemberRecord,
+    type Kinship,
+    type MaritalStatus,
+    type RentOption,
+    type UpdateBeneficiaryInput,
+} from "@/services/beneficiary/beneficiary.type";
+
+export type BeneficiaryActor = {
+    id: string;
+    name: string;
+};
+
+export const BENEFICIARY_CACHE_TAG = "beneficiaries";
+
+const LIKE_ESCAPE = "\\";
+
+const beneficiaryInclude = {
+    contacts: {
+        orderBy: { position: "asc" },
+    },
+    members: {
+        orderBy: { name: "asc" },
+        include: {
+            contacts: {
+                orderBy: { position: "asc" },
+            },
+        },
+    },
+    assistants: {
+        include: {
+            user: {
+                select: { id: true, name: true },
+            },
+        },
+    },
+} satisfies Prisma.BeneficiaryInclude;
+
+type BeneficiaryRow = Prisma.BeneficiaryGetPayload<{ include: typeof beneficiaryInclude }>;
+type FamilyMemberRow = BeneficiaryRow["members"][number];
+
+const assistedBeneficiaryInclude = {
+    contacts: {
+        orderBy: { position: "asc" },
+    },
+    members: {
+        orderBy: { name: "asc" },
+        select: {
+            id: true,
+            name: true,
+            kinship: true,
+            gender: true,
+        },
+    },
+    assistants: {
+        include: {
+            user: {
+                select: { id: true, name: true },
+            },
+        },
+    },
+} satisfies Prisma.BeneficiaryInclude;
+
+type AssistedBeneficiaryRow = Prisma.BeneficiaryGetPayload<{ include: typeof assistedBeneficiaryInclude }>;
+type AssistedFamilyMemberRow = AssistedBeneficiaryRow["members"][number];
+
+type PreparedContact = {
+    phone: string;
+    position: number;
+};
+
+type PreparedMember = {
+    id: string | null;
+    name: string;
+    kinship: Kinship;
+    cpf: string | null;
+    street: string | null;
+    neighborhood: string | null;
+    city: string | null;
+    state: string | null;
+    email: string | null;
+    dateOfBirth: Date | null;
+    gender: BeneficiaryGender | null;
+    maritalStatus: MaritalStatus | null;
+    employment: Employment | null;
+    profession: string | null;
+    notes: string | null;
+    status: BeneficiaryStatus | null;
+    aidType: AidType | null;
+    expectedDeliveryDay: number | null;
+    disability: DisabilityOption | null;
+    rent: RentOption | null;
+    contacts: PreparedContact[];
+};
+
+type PreparedBeneficiary = {
+    ok: true;
+    name: string;
+    cpf: string | null;
+    street: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    email: string | null;
+    dateOfBirth: Date;
+    gender: BeneficiaryGender;
+    maritalStatus: MaritalStatus;
+    employment: Employment;
+    profession: string | null;
+    notes: string | null;
+    status: BeneficiaryStatus;
+    aidType: AidType;
+    expectedDeliveryDay: number;
+    disability: DisabilityOption;
+    rent: RentOption;
+    contacts: PreparedContact[];
+    members: PreparedMember[];
+    assistantIds: string[];
+};
+
+type CpfReader = {
+    beneficiary: {
+        findFirst: typeof prisma.beneficiary.findFirst;
+    };
+    familyMember: {
+        findFirst: typeof prisma.familyMember.findFirst;
+    };
+};
+
+export async function listBeneficiaries(): Promise<BeneficiaryRecord[]> {
+    "use cache";
+    cacheTag(BENEFICIARY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const beneficiaries = await prisma.beneficiary.findMany({
+        include: beneficiaryInclude,
+        orderBy: { name: "asc" },
+    });
+
+    return beneficiaries.map(toBeneficiary);
+}
+
+/**
+ * Lista opções enxutas de beneficiários cadastrados em ordem alfabética para seleção em retiradas.
+ */
+export async function listBeneficiaryOptions(): Promise<BeneficiaryOptionRecord[]> {
+    "use cache";
+    cacheTag(BENEFICIARY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const rows = await prisma.beneficiary.findMany({
+        orderBy: { name: "asc" },
+        select: {
+            id: true,
+            name: true,
+            cpf: true,
+            dateOfBirth: true,
+            neighborhood: true,
+            city: true,
+            state: true,
+            status: true,
+        },
+    });
+
+    return rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        cpf: row.cpf ? formatCpf(row.cpf) : "",
+        ageLabel: formatAge(row.dateOfBirth),
+        neighborhood: row.neighborhood,
+        city: row.city,
+        state: row.state,
+        status: isBeneficiaryStatus(row.status) ? row.status : "rejected",
+    }));
+}
+
+/**
+ * Lista os beneficiários vinculados a um assistente específico em ordem alfabética.
+ */
+export async function listAssistedBeneficiaries(
+    userId: string,
+    options?: { approvedOnly?: boolean },
+): Promise<AssistedBeneficiarySummary[]> {
+    "use cache";
+    cacheTag(BENEFICIARY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const approvedOnly = options?.approvedOnly ?? false;
+
+    const rows = await prisma.beneficiary.findMany({
+        where: {
+            assistants: { some: { userId } },
+            ...(approvedOnly ? { status: "approved" } : {}),
+        },
+        orderBy: { name: "asc" },
+        select: {
+            id: true,
+            name: true,
+            cpf: true,
+            dateOfBirth: true,
+            neighborhood: true,
+            city: true,
+            state: true,
+            status: true,
+            _count: {
+                select: { members: true },
+            },
+        },
+    });
+
+    return rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        cpf: row.cpf ? formatCpf(row.cpf) : "",
+        ageLabel: formatAge(row.dateOfBirth),
+        neighborhood: row.neighborhood,
+        city: row.city,
+        state: row.state,
+        status: isBeneficiaryStatus(row.status) ? row.status : "rejected",
+        membersCount: row._count.members,
+    }));
+}
+
+/**
+ * Busca um beneficiário específico somente se ele estiver vinculado ao assistente informado.
+ */
+export async function getAssistedBeneficiary(
+    userId: string,
+    beneficiaryId: string,
+): Promise<AssistedBeneficiaryDetail | null> {
+    "use cache";
+    cacheTag(BENEFICIARY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const beneficiary = await prisma.beneficiary.findFirst({
+        where: {
+            id: beneficiaryId,
+            assistants: { some: { userId } },
+        },
+        include: assistedBeneficiaryInclude,
+    });
+
+    return beneficiary ? toAssistedBeneficiary(beneficiary) : null;
+}
+
+export async function searchBeneficiaries(query: string): Promise<BeneficiaryRecord[]> {
+    "use cache";
+    cacheTag(BENEFICIARY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const nameWords = query.match(/\p{L}+/gu) ?? [];
+    const digits = query.replace(/\D/g, "");
+
+    if (nameWords.length === 0 && digits.length === 0) {
+        return [];
+    }
+
+    const beneficiaryName = nameWords.length > 0
+        ? Prisma.sql`(${Prisma.join(nameWords.map((word) => nameLike("b.name", word)), " AND ")})`
+        : Prisma.sql`FALSE`;
+    const memberName = nameWords.length > 0
+        ? Prisma.sql`EXISTS (
+            SELECT 1
+            FROM "public"."family_member" m
+            WHERE m."beneficiaryId" = b.id
+            AND (${Prisma.join(nameWords.map((word) => nameLike("m.name", word)), " AND ")})
+        )`
+        : Prisma.sql`FALSE`;
+    const beneficiaryCpf = digits.length > 0
+        ? Prisma.sql`b.cpf LIKE ${`%${escapeLike(digits)}%`} ESCAPE ${LIKE_ESCAPE}`
+        : Prisma.sql`FALSE`;
+    const memberCpf = digits.length > 0
+        ? Prisma.sql`EXISTS (
+            SELECT 1
+            FROM "public"."family_member" m
+            WHERE m."beneficiaryId" = b.id
+            AND m.cpf LIKE ${`%${escapeLike(digits)}%`} ESCAPE ${LIKE_ESCAPE}
+        )`
+        : Prisma.sql`FALSE`;
+
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+        SELECT b.id
+        FROM "public"."beneficiary" b
+        WHERE (${beneficiaryName} OR ${memberName} OR ${beneficiaryCpf} OR ${memberCpf})
+        ORDER BY b.name ASC
+    `;
+
+    if (rows.length === 0) {
+        return [];
+    }
+
+    const beneficiaries = await prisma.beneficiary.findMany({
+        where: { id: { in: rows.map((row) => row.id) } },
+        include: beneficiaryInclude,
+        orderBy: { name: "asc" },
+    });
+
+    return beneficiaries.map(toBeneficiary);
+}
+
+/**
+ * Busca bairros ou cidades distintos já cadastrados para sugestão em formulário,
+ * ignorando acentuação e diferença entre maiúsculas e minúsculas.
+ */
+export async function searchBeneficiaryPlaces(
+    field: "neighborhood" | "city",
+    query: string,
+): Promise<string[]> {
+    "use cache";
+    cacheTag(BENEFICIARY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const normalized = query.trim().replace(/\s+/g, " ");
+    const words = normalized.split(" ").filter(Boolean);
+
+    if (words.length === 0) {
+        return [];
+    }
+
+    const beneficiaryCol = field === "neighborhood" ? Prisma.sql`b.neighborhood` : Prisma.sql`b.city`;
+    const memberCol = field === "neighborhood" ? Prisma.sql`m.neighborhood` : Prisma.sql`m.city`;
+
+    const beneficiaryMatches = Prisma.join(
+        words.map((word) => placeLike(beneficiaryCol, word)),
+        " AND ",
+    );
+    const memberMatches = Prisma.join(
+        words.map((word) => placeLike(memberCol, word)),
+        " AND ",
+    );
+    const prefixPattern = Prisma.sql`("system-auth".immutable_unaccent(lower(${escapeLike(normalized)})) || '%')`;
+
+    const rows = await prisma.$queryRaw<Array<{ value: string }>>`
+        WITH matches AS (
+            SELECT trim(${beneficiaryCol}) AS value
+            FROM "public"."beneficiary" b
+            WHERE ${beneficiaryCol} IS NOT NULL
+              AND trim(${beneficiaryCol}) <> ''
+              AND ${beneficiaryMatches}
+            UNION ALL
+            SELECT trim(${memberCol}) AS value
+            FROM "public"."family_member" m
+            WHERE ${memberCol} IS NOT NULL
+              AND trim(${memberCol}) <> ''
+              AND ${memberMatches}
+        )
+        SELECT value
+        FROM (
+            SELECT
+                value,
+                count(*) AS freq,
+                row_number() OVER (
+                    PARTITION BY "system-auth".immutable_unaccent(lower(value))
+                    ORDER BY count(*) DESC, value ASC
+                ) AS rn
+            FROM matches
+            GROUP BY value
+        ) ranked
+        WHERE rn = 1
+        ORDER BY
+            CASE
+                WHEN "system-auth".immutable_unaccent(lower(value)) LIKE ${prefixPattern} ESCAPE ${LIKE_ESCAPE} THEN 0
+                ELSE 1
+            END,
+            freq DESC,
+            value ASC
+        LIMIT 10
+    `;
+
+    return rows.map((row) => row.value);
+}
+
+export async function getBeneficiary(id: string): Promise<BeneficiaryRecord | null> {
+    "use cache";
+    cacheTag(BENEFICIARY_CACHE_TAG);
+    cacheLife("minutes");
+
+    const beneficiary = await prisma.beneficiary.findUnique({
+        where: { id },
+        include: beneficiaryInclude,
+    });
+
+    return beneficiary ? toBeneficiary(beneficiary) : null;
+}
+
+export async function createBeneficiary(
+    actor: BeneficiaryActor,
+    input: BeneficiaryInput,
+): Promise<ServerResponse<{ id: string }>> {
+    const prepared = prepareBeneficiary(input);
+
+    if (!prepared.ok) {
+        return prepared;
+    }
+
+    try {
+        const created = await prisma.$transaction(async (tx) => {
+            const taken = await findTakenCpf(tx, prepared, {});
+
+            if (taken) {
+                return { type: "cpf" as const, cpf: taken };
+            }
+
+            const assistantsExist = await assistantIdsExist(tx, prepared.assistantIds);
+
+            if (!assistantsExist) {
+                return { type: "invalid-assistant" as const };
+            }
+
+            const beneficiary = await tx.beneficiary.create({
+                data: {
+                    ...beneficiaryData(prepared),
+                    contacts: { create: prepared.contacts },
+                    members: {
+                        create: prepared.members.map(memberCreateData),
+                    },
+                    assistants: {
+                        create: prepared.assistantIds.map((userId) => ({ userId })),
+                    },
+                },
+                select: { id: true },
+            });
+
+            return { type: "ok" as const, id: beneficiary.id };
+        });
+
+        if (created.type === "cpf") {
+            return serverFailure(cpfTakenMessage(created.cpf));
+        }
+
+        if (created.type === "invalid-assistant") {
+            return serverFailure("Um ou mais assistentes não existem.");
+        }
+
+        await recordAuditLog({
+            action: "beneficiary.create",
+            entityType: "beneficiary",
+            entityId: created.id,
+            entityLabel: prepared.name,
+            description: `Beneficiário "${prepared.name}" cadastrado`,
+            actorId: actor.id,
+            actorName: actor.name,
+            metadata: {
+                status: prepared.status,
+                aidType: prepared.aidType,
+                membersCount: prepared.members.length,
+                assistantsCount: prepared.assistantIds.length,
+            },
+        });
+
+        return serverSuccess({ id: created.id }, "Beneficiário adicionado com sucesso.");
+    } catch (error) {
+        const taken = uniqueCpfFailure(error);
+
+        if (taken) {
+            return taken;
+        }
+
+        throw error;
+    }
+}
+
+export async function updateBeneficiary(
+    actor: BeneficiaryActor,
+    input: UpdateBeneficiaryInput,
+): Promise<ServerResponse> {
+    const prepared = prepareBeneficiary(input);
+
+    if (!prepared.ok) {
+        return prepared;
+    }
+
+    try {
+        const result = await prisma.$transaction(async (tx) => {
+            const current = await tx.beneficiary.findUnique({
+                where: { id: input.id },
+                select: { id: true, status: true },
+            });
+
+            if (!current) {
+                return { type: "missing" } as const;
+            }
+
+            const existingMembers = await tx.familyMember.findMany({
+                where: { beneficiaryId: input.id },
+                select: { id: true },
+            });
+            const existingIds = new Set(existingMembers.map((member) => member.id));
+            const unknownMember = prepared.members.find((member) => member.id && !existingIds.has(member.id));
+
+            if (unknownMember) {
+                return { type: "invalid-member" } as const;
+            }
+
+            const taken = await findTakenCpf(tx, prepared, {
+                beneficiaryId: input.id,
+                familyMemberIds: new Set(
+                    prepared.members.flatMap((member) => member.id ? [member.id] : []),
+                ),
+            });
+
+            if (taken) {
+                return { type: "cpf", cpf: taken } as const;
+            }
+
+            const assistantsExist = await assistantIdsExist(tx, prepared.assistantIds);
+
+            if (!assistantsExist) {
+                return { type: "invalid-assistant" } as const;
+            }
+
+            await tx.beneficiary.update({
+                where: { id: input.id },
+                data: beneficiaryData(prepared),
+            });
+            await tx.beneficiaryContact.deleteMany({
+                where: { beneficiaryId: input.id },
+            });
+
+            if (prepared.contacts.length > 0) {
+                await tx.beneficiaryContact.createMany({
+                    data: prepared.contacts.map((contact) => ({
+                        ...contact,
+                        beneficiaryId: input.id,
+                    })),
+                });
+            }
+
+            const keptIds = prepared.members.flatMap((member) => member.id ? [member.id] : []);
+
+            await tx.familyMember.deleteMany({
+                where: {
+                    beneficiaryId: input.id,
+                    id: { notIn: keptIds },
+                },
+            });
+
+            for (const member of prepared.members) {
+                const memberId = member.id;
+
+                if (memberId) {
+                    await tx.familyMember.update({
+                        where: { id: memberId },
+                        data: memberData(member),
+                    });
+                    await tx.familyMemberContact.deleteMany({
+                        where: { familyMemberId: memberId },
+                    });
+
+                    if (member.contacts.length > 0) {
+                        await tx.familyMemberContact.createMany({
+                            data: member.contacts.map((contact) => ({
+                                ...contact,
+                                familyMemberId: memberId,
+                            })),
+                        });
+                    }
+
+                    continue;
+                }
+
+                await tx.familyMember.create({
+                    data: {
+                        beneficiaryId: input.id,
+                        ...memberCreateData(member),
+                    },
+                });
+            }
+
+            await tx.beneficiaryAssistant.deleteMany({
+                where: {
+                    beneficiaryId: input.id,
+                    ...(prepared.assistantIds.length > 0
+                        ? { userId: { notIn: prepared.assistantIds } }
+                        : {}),
+                },
+            });
+
+            if (prepared.assistantIds.length > 0) {
+                await tx.beneficiaryAssistant.createMany({
+                    data: prepared.assistantIds.map((userId) => ({
+                        beneficiaryId: input.id,
+                        userId,
+                    })),
+                    skipDuplicates: true,
+                });
+            }
+
+            return { type: "ok", previousStatus: current.status } as const;
+        });
+
+        if (result.type === "missing") {
+            return serverFailure("Beneficiário não encontrado.");
+        }
+
+        if (result.type === "invalid-member") {
+            return serverFailure("Membro da família inválido.");
+        }
+
+        if (result.type === "invalid-assistant") {
+            return serverFailure("Um ou mais assistentes não existem.");
+        }
+
+        if (result.type === "cpf") {
+            return serverFailure(cpfTakenMessage(result.cpf));
+        }
+
+        await recordAuditLog({
+            action: "beneficiary.update",
+            entityType: "beneficiary",
+            entityId: input.id,
+            entityLabel: prepared.name,
+            description: `Dados de "${prepared.name}" atualizados`,
+            actorId: actor.id,
+            actorName: actor.name,
+            metadata: {
+                statusBefore: result.previousStatus,
+                statusAfter: prepared.status,
+                membersCount: prepared.members.length,
+                assistantsCount: prepared.assistantIds.length,
+            },
+        });
+
+        return serverSuccess(undefined, "Beneficiário atualizado com sucesso!");
+    } catch (error) {
+        const taken = uniqueCpfFailure(error);
+
+        if (taken) {
+            return taken;
+        }
+
+        throw error;
+    }
+}
+
+export async function deleteBeneficiary(
+    actor: BeneficiaryActor,
+    id: string,
+    password: string,
+): Promise<ServerResponse> {
+    const authCheck = await verifyAdminPassword(password, actor);
+
+    if (!authCheck.ok) {
+        return authCheck;
+    }
+
+    const current = await prisma.beneficiary.findUnique({
+        where: { id },
+        select: { id: true, name: true, status: true },
+    });
+
+    if (!current) {
+        return serverFailure("Beneficiário não encontrado.");
+    }
+
+    await prisma.beneficiary.delete({
+        where: { id },
+    });
+
+    await recordAuditLog({
+        action: "beneficiary.delete",
+        entityType: "beneficiary",
+        entityId: current.id,
+        entityLabel: current.name,
+        description: `Beneficiário "${current.name}" excluído`,
+        actorId: actor.id,
+        actorName: actor.name,
+        metadata: {
+            status: current.status,
+        },
+    });
+
+    return serverSuccess(undefined, "Beneficiário excluído com sucesso.");
+}
+
+function prepareBeneficiary(input: BeneficiaryInput): PreparedBeneficiary | ServerFailure {
+    const parsed = beneficiaryFormSchema.safeParse(input);
+
+    if (!parsed.success) {
+        return serverFailure(parsed.error.issues[0]?.message ?? "Dados inválidos.");
+    }
+
+    const value = parsed.data;
+    const dateOfBirth = parseBrazilianDate(value.dateOfBirth);
+    const gender = isBeneficiaryGender(value.gender) ? value.gender : null;
+    const maritalStatus = isMaritalStatus(value.maritalStatus) ? value.maritalStatus : null;
+    const employment = isEmployment(value.employment) ? value.employment : null;
+    const status = isBeneficiaryStatus(value.status) ? value.status : null;
+    const aidType = isAidType(value.aidType) ? value.aidType : null;
+    const expectedDeliveryDay = parseExpectedDeliveryDay(value.expectedDeliveryDay);
+    const disability = isDisabilityOption(value.disability) ? value.disability : null;
+    const rent = isRentOption(value.rent) ? value.rent : null;
+
+    if (!dateOfBirth || !gender || !maritalStatus || !employment || !status || !aidType || expectedDeliveryDay === null || !disability || !rent || !isBrazilianState(value.state)) {
+        return serverFailure("Dados inválidos.");
+    }
+
+    const prepared: PreparedBeneficiary = {
+        ok: true,
+        name: value.name.trim(),
+        cpf: emptyToNull(normalizeCpf(value.cpf)),
+        street: value.street.trim(),
+        neighborhood: value.neighborhood.trim(),
+        city: value.city.trim(),
+        state: value.state,
+        email: emptyEmail(value.email),
+        dateOfBirth,
+        gender,
+        maritalStatus,
+        employment,
+        profession: employment === "employed" ? value.profession.trim() : null,
+        notes: emptyToNull(value.notes),
+        status,
+        aidType,
+        expectedDeliveryDay,
+        disability,
+        rent,
+        contacts: toContacts(value.contacts),
+        members: [],
+        assistantIds: value.assistantIds,
+    };
+
+    for (const member of value.members) {
+        if (!isKinship(member.kinship)) {
+            return serverFailure("Selecione o vínculo.");
+        }
+
+        const dateOfBirth = member.dateOfBirth.trim() === "" ? null : parseBrazilianDate(member.dateOfBirth);
+
+        if (member.dateOfBirth.trim() !== "" && !dateOfBirth) {
+            return serverFailure("Informe uma data válida no formato DD/MM/AAAA.");
+        }
+
+        const parsedMemberDeliveryDay = parseOptionalExpectedDeliveryDay(member.expectedDeliveryDay);
+
+        if (!parsedMemberDeliveryDay.ok) {
+            return parsedMemberDeliveryDay;
+        }
+
+        const memberEmployment = isEmployment(member.employment) ? member.employment : null;
+
+        prepared.members.push({
+            id: member.id.trim() === "" ? null : member.id.trim(),
+            name: member.name.trim(),
+            kinship: member.kinship,
+            cpf: emptyToNull(normalizeCpf(member.cpf)),
+            street: emptyToNull(member.street),
+            neighborhood: emptyToNull(member.neighborhood),
+            city: emptyToNull(member.city),
+            state: isBrazilianState(member.state) ? member.state : null,
+            email: emptyEmail(member.email),
+            dateOfBirth,
+            gender: isBeneficiaryGender(member.gender) ? member.gender : null,
+            maritalStatus: isMaritalStatus(member.maritalStatus) ? member.maritalStatus : null,
+            employment: memberEmployment,
+            profession: memberEmployment === "employed" ? emptyToNull(member.profession) : null,
+            notes: emptyToNull(member.notes),
+            status: isBeneficiaryStatus(member.status) ? member.status : null,
+            aidType: isAidType(member.aidType) ? member.aidType : null,
+            expectedDeliveryDay: parsedMemberDeliveryDay.day,
+            disability: isDisabilityOption(member.disability) ? member.disability : null,
+            rent: isRentOption(member.rent) ? member.rent : null,
+            contacts: toContacts(member.contacts),
+        });
+    }
+
+    return prepared;
+}
+
+function parseOptionalExpectedDeliveryDay(
+    value: string,
+): { ok: true; day: number | null } | ServerFailure {
+    if (value.trim() === "") {
+        return { ok: true, day: null };
+    }
+
+    const day = parseExpectedDeliveryDay(value);
+
+    if (day === null) {
+        return serverFailure("Informe um dia do mês entre 1 e 31.");
+    }
+
+    return { ok: true, day };
+}
+
+function beneficiaryData(prepared: PreparedBeneficiary) {
+    return {
+        name: prepared.name,
+        cpf: prepared.cpf,
+        street: prepared.street,
+        neighborhood: prepared.neighborhood,
+        city: prepared.city,
+        state: prepared.state,
+        email: prepared.email,
+        dateOfBirth: prepared.dateOfBirth,
+        gender: prepared.gender,
+        maritalStatus: prepared.maritalStatus,
+        employment: prepared.employment,
+        profession: prepared.profession,
+        notes: prepared.notes,
+        status: prepared.status,
+        aidType: prepared.aidType,
+        expectedDeliveryDay: prepared.expectedDeliveryDay,
+        disability: prepared.disability,
+        rent: prepared.rent,
+    };
+}
+
+function memberData(member: PreparedMember) {
+    return {
+        name: member.name,
+        kinship: member.kinship,
+        cpf: member.cpf,
+        street: member.street,
+        neighborhood: member.neighborhood,
+        city: member.city,
+        state: member.state,
+        email: member.email,
+        dateOfBirth: member.dateOfBirth,
+        gender: member.gender,
+        maritalStatus: member.maritalStatus,
+        employment: member.employment,
+        profession: member.profession,
+        notes: member.notes,
+        status: member.status,
+        aidType: member.aidType,
+        expectedDeliveryDay: member.expectedDeliveryDay,
+        disability: member.disability,
+        rent: member.rent,
+    };
+}
+
+function memberCreateData(member: PreparedMember) {
+    return {
+        ...memberData(member),
+        contacts: { create: member.contacts },
+    };
+}
+
+async function findTakenCpf(
+    db: CpfReader,
+    prepared: PreparedBeneficiary,
+    ignore: { beneficiaryId?: string; familyMemberIds?: Set<string> },
+): Promise<string | null> {
+    if (prepared.cpf) {
+        const taken = await cpfExists(db, prepared.cpf, {
+            beneficiaryId: ignore.beneficiaryId,
+        });
+
+        if (taken) {
+            return prepared.cpf;
+        }
+    }
+
+    for (const member of prepared.members) {
+        if (!member.cpf) {
+            continue;
+        }
+
+        const taken = await cpfExists(db, member.cpf, {
+            familyMemberId: member.id && ignore.familyMemberIds?.has(member.id) ? member.id : undefined,
+        });
+
+        if (taken) {
+            return member.cpf;
+        }
+    }
+
+    return null;
+}
+
+async function cpfExists(
+    db: CpfReader,
+    cpf: string,
+    ignore: { beneficiaryId?: string; familyMemberId?: string },
+): Promise<boolean> {
+    const beneficiary = await db.beneficiary.findFirst({
+        where: {
+            cpf,
+            ...(ignore.beneficiaryId ? { id: { not: ignore.beneficiaryId } } : {}),
+        },
+        select: { id: true },
+    });
+
+    if (beneficiary) {
+        return true;
+    }
+
+    const member = await db.familyMember.findFirst({
+        where: {
+            cpf,
+            ...(ignore.familyMemberId ? { id: { not: ignore.familyMemberId } } : {}),
+        },
+        select: { id: true },
+    });
+
+    return member !== null;
+}
+
+function toBaseBeneficiary(row: AssistedBeneficiaryRow): Omit<BeneficiaryRecord, "members"> {
+    const gender = isBeneficiaryGender(row.gender) ? row.gender : "unspecified";
+    const maritalStatus = isMaritalStatus(row.maritalStatus) ? row.maritalStatus : "single";
+    const employment = isEmployment(row.employment) ? row.employment : "unemployed";
+    const status = isBeneficiaryStatus(row.status) ? row.status : "rejected";
+    const aidType = isAidType(row.aidType) ? row.aidType : "other";
+    const disability = isDisabilityOption(row.disability) ? row.disability : "no";
+    const rent = isRentOption(row.rent) ? row.rent : "no";
+
+    return {
+        id: row.id,
+        name: row.name,
+        cpf: row.cpf ? formatCpf(row.cpf) : "",
+        street: row.street,
+        neighborhood: row.neighborhood,
+        city: row.city,
+        state: row.state,
+        email: row.email ?? "",
+        contacts: row.contacts.map((contact) => formatContact(contact.phone)),
+        dateOfBirth: formatDateOfBirth(row.dateOfBirth),
+        ageLabel: formatAge(row.dateOfBirth),
+        gender,
+        maritalStatus,
+        employment,
+        profession: row.profession ?? "",
+        notes: row.notes ?? "",
+        status,
+        aidType,
+        expectedDeliveryDay: row.expectedDeliveryDay,
+        disability,
+        rent,
+        assistants: row.assistants
+            .map((assistant) => ({
+                id: assistant.user.id,
+                name: assistant.user.name,
+            }))
+            .sort((left, right) => left.name.localeCompare(right.name, "pt-BR")),
+    };
+}
+
+function toBeneficiary(row: BeneficiaryRow): BeneficiaryRecord {
+    return {
+        ...toBaseBeneficiary(row),
+        members: row.members.map((member) => toFamilyMember(member)),
+    };
+}
+
+function toAssistedBeneficiary(row: AssistedBeneficiaryRow): AssistedBeneficiaryDetail {
+    return {
+        ...toBaseBeneficiary(row),
+        members: row.members.map(toAssistedFamilyMember),
+    };
+}
+
+function toAssistedFamilyMember(row: AssistedFamilyMemberRow): AssistedFamilyMemberSummary {
+    const kinship = isKinship(row.kinship) ? row.kinship : "other";
+    const gender = row.gender ?? "";
+
+    return {
+        id: row.id,
+        name: row.name,
+        kinship,
+        kinshipLabel: kinshipLabel(kinship, gender),
+    };
+}
+
+async function assistantIdsExist(
+    db: Prisma.TransactionClient,
+    assistantIds: string[],
+): Promise<boolean> {
+    if (assistantIds.length === 0) {
+        return true;
+    }
+
+    const users = await db.user.findMany({
+        where: { id: { in: assistantIds } },
+        select: { id: true },
+    });
+
+    return users.length === assistantIds.length;
+}
+
+function toFamilyMember(row: FamilyMemberRow): FamilyMemberRecord {
+    const kinship = isKinship(row.kinship) ? row.kinship : "other";
+    const gender = row.gender ?? "";
+
+    return {
+        id: row.id,
+        name: row.name,
+        kinship,
+        kinshipLabel: kinshipLabel(kinship, gender),
+        cpf: row.cpf ? formatCpf(row.cpf) : "",
+        street: row.street ?? "",
+        neighborhood: row.neighborhood ?? "",
+        city: row.city ?? "",
+        state: row.state ?? "",
+        email: row.email ?? "",
+        contacts: row.contacts.map((contact) => formatContact(contact.phone)),
+        dateOfBirth: row.dateOfBirth ? formatDateOfBirth(row.dateOfBirth) : "",
+        ageLabel: row.dateOfBirth ? formatAge(row.dateOfBirth) : "",
+        gender,
+        maritalStatus: row.maritalStatus ?? "",
+        employment: row.employment ?? "",
+        profession: row.profession ?? "",
+        notes: row.notes ?? "",
+        status: row.status ?? "",
+        aidType: row.aidType ?? "",
+        expectedDeliveryDay: row.expectedDeliveryDay,
+        disability: row.disability ?? "",
+        rent: row.rent ?? "",
+    };
+}
+
+function toContacts(contacts: string[]): PreparedContact[] {
+    return contacts.map((contact, position) => ({
+        phone: normalizeContact(contact),
+        position,
+    }));
+}
+
+function emptyToNull(value: string): string | null {
+    const trimmed = value.trim();
+
+    return trimmed === "" ? null : trimmed;
+}
+
+function emptyEmail(value: string): string | null {
+    const trimmed = value.trim().toLowerCase();
+
+    return trimmed === "" ? null : trimmed;
+}
+
+function nameLike(column: "b.name" | "m.name", word: string) {
+    const pattern = Prisma.sql`('%' || "system-auth".immutable_unaccent(lower(${escapeLike(word)})) || '%')`;
+
+    if (column === "b.name") {
+        return Prisma.sql`"system-auth".immutable_unaccent(lower(b.name)) LIKE ${pattern} ESCAPE ${LIKE_ESCAPE}`;
+    }
+
+    return Prisma.sql`"system-auth".immutable_unaccent(lower(m.name)) LIKE ${pattern} ESCAPE ${LIKE_ESCAPE}`;
+}
+
+function placeLike(column: Prisma.Sql, word: string) {
+    const pattern = Prisma.sql`('%' || "system-auth".immutable_unaccent(lower(${escapeLike(word)})) || '%')`;
+
+    return Prisma.sql`"system-auth".immutable_unaccent(lower(${column})) LIKE ${pattern} ESCAPE ${LIKE_ESCAPE}`;
+}
+
+function escapeLike(value: string): string {
+    return value.replace(/[\\%_]/g, "\\$&");
+}
+
+function uniqueCpfFailure(error: unknown): ServerFailure | null {
+    if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") {
+        return null;
+    }
+
+    const target = Array.isArray(error.meta?.target) ? error.meta.target.join(" ") : String(error.meta?.target ?? "");
+
+    if (target.includes("cpf")) {
+        return serverFailure(CPF_TAKEN_MESSAGE);
+    }
+
+    return serverFailure("Não foi possível salvar o beneficiário.");
+}
