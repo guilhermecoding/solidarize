@@ -31,7 +31,7 @@ function subscribeNoop() {
 }
 
 function getIsOfflineSnapshot() {
-    return window.location.pathname === "/~offline";
+    return window.location.pathname === "/~offline" || !window.navigator.onLine;
 }
 
 function getIsOfflineServerSnapshot() {

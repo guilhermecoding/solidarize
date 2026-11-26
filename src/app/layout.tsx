@@ -4,6 +4,7 @@ import Script from "next/script";
 import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 import { SerwistProvider } from "@/app/serwist";
+import { OfflineMonitor } from "@/components/offline-monitor";
 import { cn } from "@/lib/utils";
 import SplashScreen from "@/components/splash-screen";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -60,7 +61,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           swUrl="/sw.js"
           disable={process.env.NODE_ENV === "development"}
           cacheOnNavigation={false}
+          reloadOnOnline={false}
         >
+          <OfflineMonitor />
           <ThemeProvider>
             <NextTopLoader color="var(--primary)" showSpinner={false} shadow={false} height={3} />
             <SplashScreen />
