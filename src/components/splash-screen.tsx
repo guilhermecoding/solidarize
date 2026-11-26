@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 
 import { APP_VERSION } from "@/lib/app-version";
@@ -26,14 +26,35 @@ const logoEntrance: Variants = {
     },
 };
 
+function subscribeNoop() {
+    return () => {};
+}
+
+function getIsOfflineSnapshot() {
+    return window.location.pathname === "/~offline";
+}
+
+function getIsOfflineServerSnapshot() {
+    return false;
+}
+
 /**
  * Splash screen exibida uma vez a cada abertura ou recarregamento do site,
  * mantida montada no RootLayout para não ser interrompida por redirecionamentos.
  */
 export default function SplashScreen() {
+    const isOfflineRoute = useSyncExternalStore(
+        subscribeNoop,
+        getIsOfflineSnapshot,
+        getIsOfflineServerSnapshot,
+    );
     const [visible, setVisible] = useState(true);
 
     useEffect(() => {
+        if (isOfflineRoute) {
+            return;
+        }
+
         let minDurationDone = false;
         let pageLoaded = document.readyState === "complete";
         let dismissed = false;
@@ -76,7 +97,11 @@ export default function SplashScreen() {
             window.clearTimeout(minTimer);
             window.clearTimeout(maxTimer);
         };
-    }, []);
+    }, [isOfflineRoute]);
+
+    if (isOfflineRoute) {
+        return null;
+    }
 
     return (
         <AnimatePresence>
