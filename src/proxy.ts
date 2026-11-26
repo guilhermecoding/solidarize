@@ -3,8 +3,34 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { isUserBanned } from "@/lib/member-access";
 
+const BLOCKED_AUTH_PREFIXES = [
+    "/api/auth/admin",
+    "/api/auth/sign-up",
+] as const;
+
+const BLOCKED_AUTH_EXACT_PATHS = new Set([
+    "/api/auth/update-user",
+    "/api/auth/change-email",
+    "/api/auth/change-password",
+    "/api/auth/delete-user",
+]);
+
+function isBlockedAuthApiRoute(pathname: string): boolean {
+    if (BLOCKED_AUTH_EXACT_PATHS.has(pathname)) {
+        return true;
+    }
+
+    return BLOCKED_AUTH_PREFIXES.some(
+        (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    );
+}
+
 export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
+
+    if (isBlockedAuthApiRoute(pathname)) {
+        return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
 
     const isLoginRoute =
         pathname === "/entrar" || pathname.startsWith("/entrar/");
@@ -19,7 +45,10 @@ export async function proxy(request: NextRequest) {
     }
 
     const session = await auth.api.getSession({
-        headers: await headers()
+        headers: await headers(),
+        query: {
+            disableRefresh: true,
+        },
     });
     const hasValidSession = Boolean(session?.user && !isUserBanned(session.user));
 

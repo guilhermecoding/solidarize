@@ -15,6 +15,8 @@ import {
     isBirthDateInputValid,
     parseBrazilianDate,
 } from "@/lib/validate-date-of-birth";
+import { verifyAdminPassword } from "@/lib/verify-admin-password";
+import { recordAuditLog } from "@/services/audit/audit.service";
 import {
     userGenders,
     type DeleteMemberInput,
@@ -126,6 +128,7 @@ export async function searchMembers(query: string): Promise<Member[]> {
 }
 
 export async function createMember(
+    actor: MemberActor,
     input: MemberInput,
 ): Promise<ServerResponse<MemberCredentials>> {
     const prepared = prepareMemberInput(input);
@@ -148,6 +151,7 @@ export async function createMember(
 
     const password = generatePassword();
     const requestHeaders = await headers();
+    let createdUserId: string;
 
     try {
         const created = await auth.api.createUser({
@@ -168,17 +172,35 @@ export async function createMember(
             headers: requestHeaders,
         });
 
+        createdUserId = created.user.id;
+
         if (prepared.access === "inactive") {
             try {
                 await auth.api.banUser({
                     body: {
-                        userId: created.user.id,
+                        userId: createdUserId,
                         banReason: "Acesso inativo",
                     },
                     headers: requestHeaders,
                 });
             } catch (error) {
                 if (error instanceof APIError) {
+                    await recordAuditLog({
+                        action: "member.create",
+                        entityType: "user",
+                        entityId: createdUserId,
+                        entityLabel: prepared.name,
+                        description: `Membro "${prepared.name}" cadastrado (acesso não desativado)`,
+                        actorId: actor.id,
+                        actorName: actor.name ?? "Administrador",
+                        metadata: {
+                            role: prepared.role,
+                            permission: prepared.permission,
+                            access: "active",
+                        },
+                        headers: requestHeaders,
+                    });
+
                     return serverSuccess(
                         { email: prepared.email, password },
                         "Membro adicionado, mas o acesso não pôde ser desativado.",
@@ -195,6 +217,22 @@ export async function createMember(
 
         throw error;
     }
+
+    await recordAuditLog({
+        action: "member.create",
+        entityType: "user",
+        entityId: createdUserId,
+        entityLabel: prepared.name,
+        description: `Membro "${prepared.name}" cadastrado`,
+        actorId: actor.id,
+        actorName: actor.name ?? "Administrador",
+        metadata: {
+            role: prepared.role,
+            permission: prepared.permission,
+            access: prepared.access,
+        },
+        headers: requestHeaders,
+    });
 
     return serverSuccess(
         { email: prepared.email, password },
@@ -254,6 +292,9 @@ export async function updateMember(
 
     const requestHeaders = await headers();
     const currentMember = toMember(current);
+    const privilegeDowngraded =
+        (currentMember.role === "admin" && prepared.role !== "admin")
+        || (currentMember.permission === "full" && prepared.permission !== "full");
 
     try {
         await auth.api.adminUpdateUser({
@@ -301,12 +342,61 @@ export async function updateMember(
                 });
             }
         }
+
+        if (privilegeDowngraded && actor.id !== current.id) {
+            await auth.api.revokeUserSessions({
+                body: {
+                    userId: current.id,
+                },
+                headers: requestHeaders,
+            });
+        }
     } catch (error) {
         if (error instanceof APIError) {
             return authFailure(error, "Não foi possível editar o membro.");
         }
 
         throw error;
+    }
+
+    const changedFields = collectChangedMemberFields(current, prepared);
+    const actorName = actor.name ?? "Administrador";
+
+    await recordAuditLog({
+        action: "member.update",
+        entityType: "user",
+        entityId: current.id,
+        entityLabel: prepared.name,
+        description: `Dados de "${prepared.name}" atualizados`,
+        actorId: actor.id,
+        actorName,
+        metadata: {
+            changedFields,
+            roleBefore: currentMember.role,
+            roleAfter: prepared.role,
+            permissionBefore: currentMember.permission,
+            permissionAfter: prepared.permission,
+            accessBefore: currentMember.access,
+            accessAfter: prepared.access,
+            privilegeSessionsRevoked: privilegeDowngraded && actor.id !== current.id,
+        },
+        headers: requestHeaders,
+    });
+
+    if (currentMember.access !== prepared.access) {
+        await recordAuditLog({
+            action: prepared.access === "inactive" ? "member.ban" : "member.unban",
+            entityType: "user",
+            entityId: current.id,
+            entityLabel: prepared.name,
+            description:
+                prepared.access === "inactive"
+                    ? `Acesso de "${prepared.name}" desativado`
+                    : `Acesso de "${prepared.name}" reativado`,
+            actorId: actor.id,
+            actorName,
+            headers: requestHeaders,
+        });
     }
 
     return serverSuccess(undefined, "Membro atualizado com sucesso.");
@@ -316,28 +406,19 @@ export async function deleteMember(
     actor: MemberActor,
     input: DeleteMemberInput,
 ): Promise<ServerResponse> {
-    const requestHeaders = await headers();
+    const actorName = actor.name ?? "Administrador";
+    const authCheck = await verifyAdminPassword(input.password, {
+        id: actor.id,
+        name: actorName,
+    });
 
-    try {
-        await auth.api.verifyPassword({
-            body: { password: input.password },
-            headers: requestHeaders,
-        });
-    } catch (error) {
-        if (error instanceof APIError) {
-            if (readErrorCode(error) === "INVALID_PASSWORD") {
-                return serverFailure("Senha incorreta.");
-            }
-
-            return authFailure(error, "Não foi possível confirmar a senha.");
-        }
-
-        throw error;
+    if (!authCheck.ok) {
+        return authCheck;
     }
 
     const current = await prisma.user.findUnique({
         where: { id: input.id },
-        select: { id: true, role: true },
+        select: { id: true, name: true, role: true },
     });
 
     if (!current) {
@@ -361,6 +442,8 @@ export async function deleteMember(
         }
     }
 
+    const requestHeaders = await headers();
+
     try {
         await auth.api.removeUser({
             body: { userId: current.id },
@@ -378,39 +461,48 @@ export async function deleteMember(
         throw error;
     }
 
+    await recordAuditLog({
+        action: "member.delete",
+        entityType: "user",
+        entityId: current.id,
+        entityLabel: current.name,
+        description: `Membro "${current.name}" excluído`,
+        actorId: actor.id,
+        actorName,
+        metadata: {
+            targetRole: current.role,
+        },
+        headers: requestHeaders,
+    });
+
     return serverSuccess(undefined, "Membro excluído com sucesso.");
 }
 
 export async function setMemberPassword(
+    actor: MemberActor,
     input: SetMemberPasswordInput,
 ): Promise<ServerResponse> {
-    const requestHeaders = await headers();
+    const actorName = actor.name ?? "Administrador";
+    const authCheck = await verifyAdminPassword(input.password, {
+        id: actor.id,
+        name: actorName,
+    });
 
-    try {
-        await auth.api.verifyPassword({
-            body: { password: input.password },
-            headers: requestHeaders,
-        });
-    } catch (error) {
-        if (error instanceof APIError) {
-            if (readErrorCode(error) === "INVALID_PASSWORD") {
-                return serverFailure("Senha incorreta.");
-            }
-
-            return authFailure(error, "Não foi possível confirmar a senha.");
-        }
-
-        throw error;
+    if (!authCheck.ok) {
+        return authCheck;
     }
 
     const current = await prisma.user.findUnique({
         where: { id: input.id },
-        select: { id: true },
+        select: { id: true, name: true },
     });
 
     if (!current) {
         return serverFailure("Membro não encontrado.");
     }
+
+    const requestHeaders = await headers();
+    const isSelf = actor.id === current.id;
 
     try {
         await auth.api.setUserPassword({
@@ -420,6 +512,19 @@ export async function setMemberPassword(
             },
             headers: requestHeaders,
         });
+
+        if (isSelf) {
+            await auth.api.revokeOtherSessions({
+                headers: requestHeaders,
+            });
+        } else {
+            await auth.api.revokeUserSessions({
+                body: {
+                    userId: current.id,
+                },
+                headers: requestHeaders,
+            });
+        }
     } catch (error) {
         if (error instanceof APIError) {
             const code = readErrorCode(error);
@@ -441,6 +546,21 @@ export async function setMemberPassword(
 
         throw error;
     }
+
+    await recordAuditLog({
+        action: "member.set_password",
+        entityType: "user",
+        entityId: current.id,
+        entityLabel: current.name,
+        description: `Senha de "${current.name}" redefinida e sessões revogadas`,
+        actorId: actor.id,
+        actorName,
+        metadata: {
+            selfChange: isSelf,
+            sessionsRevoked: true,
+        },
+        headers: requestHeaders,
+    });
 
     return serverSuccess(undefined, "Senha alterada com sucesso.");
 }
@@ -635,6 +755,26 @@ function authFailure(error: APIError, fallback: string): ServerFailure {
     }
 
     return serverFailure(fallback);
+}
+
+function collectChangedMemberFields(
+    current: MemberRecord,
+    prepared: PreparedMember,
+): string[] {
+    const changed: string[] = [];
+
+    if (current.name !== prepared.name) changed.push("name");
+    if (current.email.toLowerCase() !== prepared.email.toLowerCase()) changed.push("email");
+    if (current.cpf !== prepared.cpf) changed.push("cpf");
+    if (current.contact !== prepared.contact) changed.push("contact");
+    if ((current.address ?? "") !== prepared.address) changed.push("address");
+    if (formatDateOfBirth(current.dateOfBirth) !== formatDateOfBirth(prepared.dateOfBirth)) changed.push("dateOfBirth");
+    if (toGender(current.gender) !== prepared.gender) changed.push("gender");
+    if ((current.role === "admin" ? "admin" : "member") !== prepared.role) changed.push("role");
+    if (toAccess(current.banned, current.banExpires) !== prepared.access) changed.push("access");
+    if ((current.permission === "full" ? "full" : "read") !== prepared.permission) changed.push("permission");
+
+    return changed;
 }
 
 function readErrorCode(error: APIError): string | null {

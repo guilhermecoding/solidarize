@@ -79,6 +79,41 @@ export function getBrazilDateKey(date: Date): string {
 }
 
 /**
+ * Retorna a chave mensal no formato AAAA-MM (fuso America/Sao_Paulo).
+ */
+export function getBrazilMonthKey(date: Date): string {
+    const { month, year } = getBrazilDateParts(date);
+
+    return `${year}-${String(month).padStart(2, "0")}`;
+}
+
+function getBrazilMonthStart(year: number, month: number): Date {
+    const noonUtc = Date.UTC(year, month - 1, 1, 12, 0, 0);
+    const parts = getBrazilDateParts(new Date(noonUtc));
+
+    return new Date(noonUtc - (parts.hour * 60 + parts.minute) * 60_000);
+}
+
+/**
+ * Retorna o intervalo UTC [start, end) correspondente ao mês calendário atual no fuso America/Sao_Paulo.
+ */
+export function getBrazilMonthRange(date: Date): {
+    start: Date;
+    end: Date;
+    monthKey: string;
+} {
+    const { year, month } = getBrazilDateParts(date);
+    const nextYear = month === 12 ? year + 1 : year;
+    const nextMonth = month === 12 ? 1 : month + 1;
+
+    return {
+        start: getBrazilMonthStart(year, month),
+        end: getBrazilMonthStart(nextYear, nextMonth),
+        monthKey: `${year}-${String(month).padStart(2, "0")}`,
+    };
+}
+
+/**
  * Converte uma chave DD-MM-AAAA em timestamp UTC de meia-noite para aritmética de dias.
  */
 export function getBrazilTodayUtc(referenceDateKey: string): number {

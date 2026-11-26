@@ -4,7 +4,11 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { RetirarCestaPanel } from "@/app/(sistema)/retirar-cesta/_components/retirar-cesta-panel";
 import TitlePage from "@/components/title-page";
 import { getCurrentUser } from "@/lib/current-user";
-import { listAvailableBaskets } from "@/services/basket/basket.service";
+import { getBrazilMonthRange } from "@/lib/date-br";
+import {
+    listAvailableBaskets,
+    listBeneficiaryIdsDeliveredInMonth,
+} from "@/services/basket/basket.service";
 import { listAssistedBeneficiaries } from "@/services/beneficiary/beneficiary.service";
 
 /**
@@ -32,12 +36,21 @@ export async function RetirarCestaSection() {
         );
     }
 
+    const { start, end, monthKey } = getBrazilMonthRange(new Date());
+    const deliveredThisMonthIds = await listBeneficiaryIdsDeliveredInMonth({
+        beneficiaryIds: beneficiaries.map((beneficiary) => beneficiary.id),
+        monthKey,
+        startIso: start.toISOString(),
+        endIso: end.toISOString(),
+    });
+
     return (
         <>
             <TitlePage title="Escolha a quem deseja destinar" />
             <RetirarCestaPanel
                 beneficiaries={beneficiaries}
                 availableBaskets={availableBaskets}
+                deliveredThisMonthIds={deliveredThisMonthIds}
             />
         </>
     );

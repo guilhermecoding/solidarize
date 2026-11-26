@@ -150,9 +150,16 @@ export const withdrawBasketsSchema = z.intersection(
     withdrawalRecipientSchema,
 );
 
+const withdrawAssistedBasketItemSchema = z.object({
+    basketId: z.string().trim().min(1, "Cesta inválida."),
+    quantity: z.literal(1, "É permitido retirar apenas 1 cesta por beneficiário por mês."),
+});
+
 export const withdrawAssistedBasketsSchema = z.object({
     beneficiaryId: z.string().trim().min(1, "Selecione um beneficiário."),
-    items: withdrawBasketItemsSchema,
+    items: z
+        .array(withdrawAssistedBasketItemSchema)
+        .length(1, "Selecione exatamente 1 cesta para retirar."),
 });
 
 const withdrawFoodItemSchema = z.object({

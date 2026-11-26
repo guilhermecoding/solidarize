@@ -16,6 +16,7 @@ import {
     withdrawFoodsSchema,
 } from "@/app/(sistema)/cestas/schema";
 import { inventoryWriteActionClient } from "@/lib/safe-action";
+import { AUDIT_LOG_CACHE_TAG } from "@/services/audit/audit.service";
 import {
     BASKET_CACHE_TAG,
     BASKET_HISTORY_CACHE_TAG,
@@ -142,6 +143,9 @@ export const deleteBasketAction = inventoryWriteActionClient
                 baskets: true,
                 basketHistory: true,
             });
+        } else {
+            updateTag(AUDIT_LOG_CACHE_TAG);
+            revalidatePath("/auditoria");
         }
 
         return result;
@@ -207,6 +211,9 @@ export const deleteBasketTemplateAction = inventoryWriteActionClient
                 baskets: true,
                 basketHistory: true,
             });
+        } else {
+            updateTag(AUDIT_LOG_CACHE_TAG);
+            revalidatePath("/auditoria");
         }
 
         return result;
@@ -258,6 +265,9 @@ export const deleteFoodAction = inventoryWriteActionClient
                 baskets: true,
                 templates: true,
             });
+        } else {
+            updateTag(AUDIT_LOG_CACHE_TAG);
+            revalidatePath("/auditoria");
         }
 
         return result;

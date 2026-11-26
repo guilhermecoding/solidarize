@@ -39,6 +39,7 @@ model User {
   createdBasketTemplates BasketTemplate[] @relation("BasketTemplateCreatedBy")
   createdBaskets         Basket[]         @relation("BasketCreatedBy")
   basketHistories        BasketHistory[]  @relation("BasketHistoryCreatedBy")
+  auditLogs              AuditLog[]       @relation("AuditLogActor")
 
   @@unique([email])
   @@unique([cpf])
@@ -352,5 +353,50 @@ model BasketHistory {
   @@index([beneficiaryId])
   @@index([createdById])
   @@map("basket_history")
+  @@schema("public")
+}
+
+model RateLimit {
+  id          String @id
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+
+  @@map("rate_limit")
+  @@schema("system-auth")
+}
+
+model SecurityRateLimit {
+  key           String    @id
+  attempts      Int       @default(0)
+  windowStartAt DateTime  @default(now())
+  lockedUntil   DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  @@index([updatedAt])
+  @@map("security_rate_limit")
+  @@schema("system-auth")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  action      String
+  entityType  String
+  entityId    String?
+  entityLabel String?
+  description String
+  actorId     String?
+  actor       User?    @relation("AuditLogActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actorName   String
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@map("audit_log")
   @@schema("public")
 }

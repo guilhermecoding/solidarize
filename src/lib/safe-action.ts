@@ -3,6 +3,7 @@ import { createSafeActionClient } from "next-safe-action";
 
 import { auth } from "@/lib/auth";
 import { hasReadAccess, hasWriteAccess, isUserBanned } from "@/lib/member-access";
+import { logSafeServerError } from "@/lib/safe-log";
 import type { MemberActor } from "@/services/user/user.type";
 
 export class ActionError extends Error {
@@ -14,7 +15,7 @@ export class ActionError extends Error {
 
 export const actionClient = createSafeActionClient({
     handleServerError(error) {
-        console.error(error);
+        logSafeServerError("safe-action", error);
 
         if (error instanceof ActionError) {
             return error.message;

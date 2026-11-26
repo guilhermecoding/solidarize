@@ -1,4 +1,5 @@
 import {
+    Audit02Icon,
     HealtcareIcon,
     Home04Icon,
     KanbanIcon,
@@ -31,6 +32,12 @@ export const navManagement: NavSectionGroup[] = [
         mobileUrl: "/gestao",
         items: [
             {
+                name: "Indicadores",
+                url: "/indicadores",
+                icon: PieChartIcon,
+                requiresReadAccess: true,
+            },
+            {
                 name: "Beneficiários",
                 url: "/beneficiarios",
                 icon: ServiceIcon,
@@ -43,15 +50,15 @@ export const navManagement: NavSectionGroup[] = [
                 requiresReadAccess: true,
             },
             {
-                name: "Indicadores",
-                url: "/indicadores",
-                icon: PieChartIcon,
-                requiresReadAccess: true,
-            },
-            {
                 name: "Membros",
                 url: "/membros",
                 icon: UserMultiple02Icon,
+                requiresReadAccess: true,
+            },
+            {
+                name: "Auditoria",
+                url: "/auditoria",
+                icon: Audit02Icon,
                 requiresReadAccess: true,
             },
         ],

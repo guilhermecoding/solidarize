@@ -16,6 +16,7 @@ import {
     formatDateBr,
     formatDateTimeBr,
     getBrazilDateKey,
+    getBrazilMonthRange,
     getHistoryDayGroup,
     getHistoryMonthGroup,
 } from "@/lib/date-br";
@@ -265,7 +266,7 @@ export async function deleteBasketTemplate(
     id: string,
     password: string,
 ): Promise<ServerResponse> {
-    const authCheck = await verifyAdminPassword(password);
+    const authCheck = await verifyAdminPassword(password, actor);
 
     if (!authCheck.ok) {
         return authCheck;
@@ -667,7 +668,7 @@ export async function deleteBasket(
     id: string,
     password: string,
 ): Promise<ServerResponse> {
-    const authCheck = await verifyAdminPassword(password);
+    const authCheck = await verifyAdminPassword(password, actor);
 
     if (!authCheck.ok) {
         return authCheck;
@@ -815,6 +816,30 @@ export async function withdrawAssistedBaskets(
                 throw new InventoryRuleError("Apenas beneficiários aprovados podem receber cestas.");
             }
 
+            await tx.$queryRaw`
+                SELECT id
+                FROM "public"."beneficiary"
+                WHERE id = ${beneficiary.id}
+                FOR UPDATE
+            `;
+
+            const { start, end } = getBrazilMonthRange(new Date());
+            const existingDelivery = await tx.basketHistory.findFirst({
+                where: {
+                    beneficiaryId: beneficiary.id,
+                    type: "out",
+                    createdAt: {
+                        gte: start,
+                        lt: end,
+                    },
+                },
+                select: { id: true },
+            });
+
+            if (existingDelivery) {
+                throw new InventoryRuleError("Este beneficiário já recebeu uma cesta neste mês.");
+            }
+
             await executeBasketStockWithdrawal(tx, {
                 items: data.items,
                 beneficiaryId: beneficiary.id,
@@ -824,12 +849,7 @@ export async function withdrawAssistedBaskets(
             });
         });
 
-        const totalUnits = data.items.reduce((sum, item) => sum + item.quantity, 0);
-        const message = totalUnits === 1
-            ? "Retirada de 1 cesta registrada com sucesso."
-            : `Retirada de ${totalUnits} cestas registrada com sucesso.`;
-
-        return serverSuccess(undefined, message);
+        return serverSuccess(undefined, "Retirada de 1 cesta registrada com sucesso.");
     } catch (error) {
         if (error instanceof InventoryRuleError) {
             return serverFailure(error.message);
@@ -837,6 +857,50 @@ export async function withdrawAssistedBaskets(
 
         throw error;
     }
+}
+
+/**
+ * Retorna os IDs dos beneficiários informados que já receberam cesta no intervalo do mês informado.
+ */
+export async function listBeneficiaryIdsDeliveredInMonth({
+    beneficiaryIds,
+    monthKey: _monthKey,
+    startIso,
+    endIso,
+}: {
+    beneficiaryIds: string[];
+    monthKey: string;
+    startIso: string;
+    endIso: string;
+}): Promise<string[]> {
+    "use cache";
+    cacheTag(BASKET_HISTORY_CACHE_TAG);
+    cacheLife("minutes");
+
+    void _monthKey;
+
+    if (beneficiaryIds.length === 0) {
+        return [];
+    }
+
+    const rows = await prisma.basketHistory.findMany({
+        where: {
+            beneficiaryId: { in: beneficiaryIds },
+            type: "out",
+            createdAt: {
+                gte: new Date(startIso),
+                lt: new Date(endIso),
+            },
+        },
+        select: {
+            beneficiaryId: true,
+        },
+        distinct: ["beneficiaryId"],
+    });
+
+    return rows
+        .map((row) => row.beneficiaryId)
+        .filter((id): id is string => id !== null);
 }
 
 async function executeBasketStockWithdrawal(

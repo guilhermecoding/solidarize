@@ -11,6 +11,11 @@ export const memberRole = ac.newRole({
     ...userAc.statements,
 });
 
+const adminUserStatements = adminAc.statements.user.filter(
+    (permission) => permission !== "impersonate",
+);
+
 export const adminRole = ac.newRole({
     ...adminAc.statements,
+    user: adminUserStatements,
 });

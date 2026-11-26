@@ -3,6 +3,7 @@
 import { revalidatePath, updateTag } from "next/cache";
 
 import { beneficiaryReadActionClient, beneficiaryWriteActionClient } from "@/lib/safe-action";
+import { AUDIT_LOG_CACHE_TAG } from "@/services/audit/audit.service";
 import {
     BENEFICIARY_CACHE_TAG,
     createBeneficiary,
@@ -20,6 +21,11 @@ import {
     updateBeneficiarySchema,
 } from "./schema";
 
+function refreshAudit() {
+    updateTag(AUDIT_LOG_CACHE_TAG);
+    revalidatePath("/auditoria");
+}
+
 function refreshBeneficiaries(id?: string) {
     updateTag(BENEFICIARY_CACHE_TAG);
     revalidatePath("/beneficiarios");
@@ -27,6 +33,7 @@ function refreshBeneficiaries(id?: string) {
     revalidatePath("/retirar-cesta");
     revalidatePath("/minhas-familias");
     revalidatePath("/indicadores");
+    refreshAudit();
 
     if (id) {
         revalidatePath(`/beneficiarios/${id}`);
@@ -51,8 +58,11 @@ export const searchBeneficiaryPlacesAction = beneficiaryReadActionClient
 
 export const createBeneficiaryAction = beneficiaryWriteActionClient
     .inputSchema(beneficiaryFormSchema)
-    .action(async ({ parsedInput }) => {
-        const result = await createBeneficiary(toBeneficiaryInput(parsedInput));
+    .action(async ({ parsedInput, ctx }) => {
+        const result = await createBeneficiary(
+            { id: ctx.actor.id, name: ctx.actor.name },
+            toBeneficiaryInput(parsedInput),
+        );
 
         if (result.ok) {
             refreshBeneficiaries(result.data.id);
@@ -63,12 +73,15 @@ export const createBeneficiaryAction = beneficiaryWriteActionClient
 
 export const updateBeneficiaryAction = beneficiaryWriteActionClient
     .inputSchema(updateBeneficiarySchema)
-    .action(async ({ parsedInput }) => {
+    .action(async ({ parsedInput, ctx }) => {
         const { id, ...values } = parsedInput;
-        const result = await updateBeneficiary({
-            id,
-            ...toBeneficiaryInput(values),
-        });
+        const result = await updateBeneficiary(
+            { id: ctx.actor.id, name: ctx.actor.name },
+            {
+                id,
+                ...toBeneficiaryInput(values),
+            },
+        );
 
         if (result.ok) {
             refreshBeneficiaries(id);
@@ -79,11 +92,17 @@ export const updateBeneficiaryAction = beneficiaryWriteActionClient
 
 export const deleteBeneficiaryAction = beneficiaryWriteActionClient
     .inputSchema(deleteBeneficiarySchema)
-    .action(async ({ parsedInput }) => {
-        const result = await deleteBeneficiary(parsedInput.id, parsedInput.password);
+    .action(async ({ parsedInput, ctx }) => {
+        const result = await deleteBeneficiary(
+            { id: ctx.actor.id, name: ctx.actor.name },
+            parsedInput.id,
+            parsedInput.password,
+        );
 
         if (result.ok) {
             refreshBeneficiaries(parsedInput.id);
+        } else {
+            refreshAudit();
         }
 
         return result;

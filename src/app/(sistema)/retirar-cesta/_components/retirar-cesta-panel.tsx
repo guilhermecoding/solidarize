@@ -7,7 +7,9 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 import { WithdrawAssistedBasketDrawer } from "@/app/(sistema)/retirar-cesta/_components/withdraw-assisted-basket-drawer";
 import { ResultDialog } from "@/components/shared/result-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import type { BasketRecord } from "@/services/basket/basket.type";
 import type { AssistedBeneficiarySummary } from "@/services/beneficiary/beneficiary.type";
 
@@ -16,6 +18,7 @@ const PAGE_SIZE = 10;
 type RetirarCestaPanelProps = {
     beneficiaries: AssistedBeneficiarySummary[];
     availableBaskets: BasketRecord[];
+    deliveredThisMonthIds: string[];
 };
 
 /**
@@ -24,11 +27,13 @@ type RetirarCestaPanelProps = {
 export function RetirarCestaPanel({
     beneficiaries,
     availableBaskets,
+    deliveredThisMonthIds,
 }: RetirarCestaPanelProps) {
     const router = useRouter();
     const [page, setPage] = useState(1);
     const [selectedBeneficiary, setSelectedBeneficiary] = useState<AssistedBeneficiarySummary | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
+    const deliveredSet = new Set(deliveredThisMonthIds);
 
     const pageCount = Math.max(1, Math.ceil(beneficiaries.length / PAGE_SIZE));
     const currentPage = Math.min(page, pageCount);
@@ -41,31 +46,48 @@ export function RetirarCestaPanel({
         <>
             <div className="flex flex-col gap-4">
                 <ul className="flex flex-col gap-3">
-                    {pageBeneficiaries.map((beneficiary) => (
-                        <li key={beneficiary.id}>
-                            <button
-                                type="button"
-                                onClick={() => setSelectedBeneficiary(beneficiary)}
-                                className="flex w-full cursor-pointer items-center justify-between gap-3 rounded-xl border bg-background px-4 py-3 text-left transition-colors outline-none hover:border-foreground/20 focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                            >
-                                <div className="min-w-0 flex-1">
-                                    <p className="truncate font-medium">{beneficiary.name}</p>
-                                    {beneficiary.membersCount > 0 ? (
-                                        <p className="truncate text-xs text-muted-foreground opacity-80">
-                                            {beneficiary.membersCount === 1
-                                                ? "e +1 membro da família"
-                                                : `e +${beneficiary.membersCount} membros da família`}
-                                        </p>
+                    {pageBeneficiaries.map((beneficiary) => {
+                        const alreadyDelivered = deliveredSet.has(beneficiary.id);
+
+                        return (
+                            <li key={beneficiary.id}>
+                                <button
+                                    type="button"
+                                    disabled={alreadyDelivered}
+                                    onClick={() => setSelectedBeneficiary(beneficiary)}
+                                    className={cn(
+                                        "flex w-full items-center justify-between gap-3 rounded-xl border bg-background px-4 py-3 text-left transition-colors outline-none",
+                                        alreadyDelivered
+                                            ? "cursor-not-allowed opacity-60"
+                                            : "cursor-pointer hover:border-foreground/20 focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                                    )}
+                                >
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <p className="truncate font-medium">{beneficiary.name}</p>
+                                            {alreadyDelivered ? (
+                                                <Badge variant="muted">Já recebeu neste mês</Badge>
+                                            ) : null}
+                                        </div>
+                                        {beneficiary.membersCount > 0 ? (
+                                            <p className="truncate text-xs text-muted-foreground opacity-80">
+                                                {beneficiary.membersCount === 1
+                                                    ? "e +1 membro da família"
+                                                    : `e +${beneficiary.membersCount} membros da família`}
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                    {!alreadyDelivered ? (
+                                        <HugeiconsIcon
+                                            icon={ArrowRight01Icon}
+                                            strokeWidth={2}
+                                            className="size-4 shrink-0 text-muted-foreground"
+                                        />
                                     ) : null}
-                                </div>
-                                <HugeiconsIcon
-                                    icon={ArrowRight01Icon}
-                                    strokeWidth={2}
-                                    className="size-4 shrink-0 text-muted-foreground"
-                                />
-                            </button>
-                        </li>
-                    ))}
+                                </button>
+                            </li>
+                        );
+                    })}
                 </ul>
 
                 {beneficiaries.length > PAGE_SIZE ? (

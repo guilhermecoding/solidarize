@@ -395,6 +395,17 @@ export type AssistedBeneficiarySummary = {
     membersCount: number;
 };
 
+export type AssistedFamilyMemberSummary = {
+    id: string;
+    name: string;
+    kinship: Kinship;
+    kinshipLabel: string;
+};
+
+export type AssistedBeneficiaryDetail = Omit<BeneficiaryRecord, "members"> & {
+    members: AssistedFamilyMemberSummary[];
+};
+
 export type BeneficiaryRecord = {
     id: string;
     name: string;

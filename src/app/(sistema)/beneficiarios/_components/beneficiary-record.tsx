@@ -17,6 +17,7 @@ import {
     employmentLabels,
     maritalStatusLabels,
     rentLabels,
+    type AssistedBeneficiaryDetail,
     type BeneficiaryRecord,
 } from "@/services/beneficiary/beneficiary.type";
 
@@ -28,7 +29,7 @@ export function BeneficiaryRecordView({
     assistantsTitle = "Assistentes vinculados",
     emptyAssistantsText = "Nenhum assistente vinculado",
 }: {
-    beneficiary: BeneficiaryRecord;
+    beneficiary: BeneficiaryRecord | AssistedBeneficiaryDetail;
     excludeAssistantId?: string;
     assistantsTitle?: string;
     emptyAssistantsText?: string;
@@ -149,7 +150,7 @@ export function BeneficiaryRecordView({
 }
 
 function titularRows(
-    beneficiary: BeneficiaryRecord,
+    beneficiary: BeneficiaryRecord | AssistedBeneficiaryDetail,
 ): Array<{ label: string; value: ReactNode }> {
     return [
         { label: "Nome Completo", value: beneficiary.name },

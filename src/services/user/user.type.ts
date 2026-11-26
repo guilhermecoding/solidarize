@@ -35,6 +35,7 @@ export const userGenderLabels: Record<UserGender, string> = {
 
 export type MemberActor = {
     id: string;
+    name?: string | null;
     role?: string | null;
     permission?: string | null;
 };

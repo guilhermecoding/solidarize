@@ -393,7 +393,7 @@ export async function deleteFood(
     id: string,
     password: string,
 ): Promise<ServerResponse> {
-    const authCheck = await verifyAdminPassword(password);
+    const authCheck = await verifyAdminPassword(password, actor);
 
     if (!authCheck.ok) {
         return authCheck;

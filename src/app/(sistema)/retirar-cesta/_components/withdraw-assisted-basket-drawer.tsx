@@ -75,26 +75,34 @@ export function WithdrawAssistedBasketDrawer({
         .filter((entry) => entry.quantity > 0);
 
     const totalSelectedUnits = selectedItems.reduce((sum, entry) => sum + entry.quantity, 0);
-    const canProceedStep1 = baskets.length > 0 && selectedItems.length > 0 && beneficiary !== null;
+    const canProceedStep1 =
+        baskets.length > 0
+        && selectedItems.length === 1
+        && totalSelectedUnits === 1
+        && beneficiary !== null;
 
     const stepDescription =
         step === 1
             ? beneficiary
-                ? `Escolha quais cestas em estoque serão retiradas para ${beneficiary.name} e informe a quantidade.`
-                : "Escolha quais cestas em estoque serão retiradas e informe a quantidade."
-            : "Revise as cestas selecionadas e o destinatário antes de confirmar.";
+                ? `Escolha 1 cesta em estoque para retirar para ${beneficiary.name} (limite de 1 cesta por mês).`
+                : "Escolha 1 cesta em estoque para retirar (limite de 1 cesta por mês)."
+            : "Revise a cesta selecionada e o destinatário antes de confirmar.";
 
     function handleConfirm() {
-        if (!canProceedStep1 || !beneficiary || isPending) {
+        const selectedItem = selectedItems[0];
+
+        if (!canProceedStep1 || !beneficiary || !selectedItem || isPending) {
             return;
         }
 
         executeWithdraw({
             beneficiaryId: beneficiary.id,
-            items: selectedItems.map((entry) => ({
-                basketId: entry.basket.id,
-                quantity: entry.quantity,
-            })),
+            items: [
+                {
+                    basketId: selectedItem.basket.id,
+                    quantity: 1,
+                },
+            ],
         });
     }
 
@@ -176,6 +184,7 @@ export function WithdrawAssistedBasketDrawer({
                         baskets={baskets}
                         quantities={quantities}
                         disabled={isPending}
+                        maxTotalUnits={1}
                         onChangeQuantity={(basketId, nextValue) =>
                             setQuantities((prev) => ({
                                 ...prev,

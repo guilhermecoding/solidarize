@@ -1,11 +1,12 @@
 import "server-only";
 
-import { cacheLife } from "next/cache";
+import { cacheLife, cacheTag } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { auth } from "@/lib/auth";
 import { isUserBanned } from "@/lib/member-access";
+import { USER_CACHE_TAG } from "@/services/user/user.service";
 
 export type CurrentUser = {
     id: string;
@@ -18,10 +19,14 @@ export type CurrentUser = {
 
 export async function getCurrentUser(): Promise<CurrentUser> {
     "use cache: private";
-    cacheLife("minutes");
+    cacheTag(USER_CACHE_TAG);
+    cacheLife({ stale: 30, revalidate: 30, expire: 60 });
 
     const session = await auth.api.getSession({
         headers: await headers(),
+        query: {
+            disableRefresh: true,
+        },
     });
 
     if (!session?.user || isUserBanned(session.user)) {

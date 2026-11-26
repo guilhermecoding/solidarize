@@ -1,17 +1,16 @@
 import "server-only";
 
 import { cacheLife, cacheTag } from "next/cache";
-import { headers } from "next/headers";
-import { APIError } from "better-auth/api";
 
 import { serverFailure, serverSuccess, type ServerFailure, type ServerResponse } from "@/@types/server-response";
 import { Prisma } from "@/generated/prisma/client";
 import { beneficiaryFormSchema } from "@/app/(sistema)/beneficiarios/schema";
-import { auth } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { formatContact, normalizeContact } from "@/lib/validate-contact";
 import { formatCpf, normalizeCpf } from "@/lib/validate-cpf";
 import { formatDateOfBirth, parseBrazilianDate } from "@/lib/validate-date-of-birth";
+import { verifyAdminPassword } from "@/lib/verify-admin-password";
+import { recordAuditLog } from "@/services/audit/audit.service";
 import {
     formatAge,
     isAidType,
@@ -28,7 +27,9 @@ import {
     cpfTakenMessage,
     CPF_TAKEN_MESSAGE,
     type AidType,
+    type AssistedBeneficiaryDetail,
     type AssistedBeneficiarySummary,
+    type AssistedFamilyMemberSummary,
     type BeneficiaryGender,
     type BeneficiaryInput,
     type BeneficiaryOptionRecord,
@@ -42,6 +43,11 @@ import {
     type RentOption,
     type UpdateBeneficiaryInput,
 } from "@/services/beneficiary/beneficiary.type";
+
+export type BeneficiaryActor = {
+    id: string;
+    name: string;
+};
 
 export const BENEFICIARY_CACHE_TAG = "beneficiaries";
 
@@ -70,6 +76,31 @@ const beneficiaryInclude = {
 
 type BeneficiaryRow = Prisma.BeneficiaryGetPayload<{ include: typeof beneficiaryInclude }>;
 type FamilyMemberRow = BeneficiaryRow["members"][number];
+
+const assistedBeneficiaryInclude = {
+    contacts: {
+        orderBy: { position: "asc" },
+    },
+    members: {
+        orderBy: { name: "asc" },
+        select: {
+            id: true,
+            name: true,
+            kinship: true,
+            gender: true,
+        },
+    },
+    assistants: {
+        include: {
+            user: {
+                select: { id: true, name: true },
+            },
+        },
+    },
+} satisfies Prisma.BeneficiaryInclude;
+
+type AssistedBeneficiaryRow = Prisma.BeneficiaryGetPayload<{ include: typeof assistedBeneficiaryInclude }>;
+type AssistedFamilyMemberRow = AssistedBeneficiaryRow["members"][number];
 
 type PreparedContact = {
     phone: string;
@@ -234,7 +265,7 @@ export async function listAssistedBeneficiaries(
 export async function getAssistedBeneficiary(
     userId: string,
     beneficiaryId: string,
-): Promise<BeneficiaryRecord | null> {
+): Promise<AssistedBeneficiaryDetail | null> {
     "use cache";
     cacheTag(BENEFICIARY_CACHE_TAG);
     cacheLife("minutes");
@@ -244,10 +275,10 @@ export async function getAssistedBeneficiary(
             id: beneficiaryId,
             assistants: { some: { userId } },
         },
-        include: beneficiaryInclude,
+        include: assistedBeneficiaryInclude,
     });
 
-    return beneficiary ? toBeneficiary(beneficiary) : null;
+    return beneficiary ? toAssistedBeneficiary(beneficiary) : null;
 }
 
 export async function searchBeneficiaries(query: string): Promise<BeneficiaryRecord[]> {
@@ -391,6 +422,7 @@ export async function getBeneficiary(id: string): Promise<BeneficiaryRecord | nu
 }
 
 export async function createBeneficiary(
+    actor: BeneficiaryActor,
     input: BeneficiaryInput,
 ): Promise<ServerResponse<{ id: string }>> {
     const prepared = prepareBeneficiary(input);
@@ -438,6 +470,22 @@ export async function createBeneficiary(
             return serverFailure("Um ou mais assistentes não existem.");
         }
 
+        await recordAuditLog({
+            action: "beneficiary.create",
+            entityType: "beneficiary",
+            entityId: created.id,
+            entityLabel: prepared.name,
+            description: `Beneficiário "${prepared.name}" cadastrado`,
+            actorId: actor.id,
+            actorName: actor.name,
+            metadata: {
+                status: prepared.status,
+                aidType: prepared.aidType,
+                membersCount: prepared.members.length,
+                assistantsCount: prepared.assistantIds.length,
+            },
+        });
+
         return serverSuccess({ id: created.id }, "Beneficiário adicionado com sucesso.");
     } catch (error) {
         const taken = uniqueCpfFailure(error);
@@ -451,6 +499,7 @@ export async function createBeneficiary(
 }
 
 export async function updateBeneficiary(
+    actor: BeneficiaryActor,
     input: UpdateBeneficiaryInput,
 ): Promise<ServerResponse> {
     const prepared = prepareBeneficiary(input);
@@ -463,7 +512,7 @@ export async function updateBeneficiary(
         const result = await prisma.$transaction(async (tx) => {
             const current = await tx.beneficiary.findUnique({
                 where: { id: input.id },
-                select: { id: true },
+                select: { id: true, status: true },
             });
 
             if (!current) {
@@ -575,7 +624,7 @@ export async function updateBeneficiary(
                 });
             }
 
-            return { type: "ok" } as const;
+            return { type: "ok", previousStatus: current.status } as const;
         });
 
         if (result.type === "missing") {
@@ -594,6 +643,22 @@ export async function updateBeneficiary(
             return serverFailure(cpfTakenMessage(result.cpf));
         }
 
+        await recordAuditLog({
+            action: "beneficiary.update",
+            entityType: "beneficiary",
+            entityId: input.id,
+            entityLabel: prepared.name,
+            description: `Dados de "${prepared.name}" atualizados`,
+            actorId: actor.id,
+            actorName: actor.name,
+            metadata: {
+                statusBefore: result.previousStatus,
+                statusAfter: prepared.status,
+                membersCount: prepared.members.length,
+                assistantsCount: prepared.assistantIds.length,
+            },
+        });
+
         return serverSuccess(undefined, "Beneficiário atualizado com sucesso!");
     } catch (error) {
         const taken = uniqueCpfFailure(error);
@@ -606,29 +671,20 @@ export async function updateBeneficiary(
     }
 }
 
-export async function deleteBeneficiary(id: string, password: string): Promise<ServerResponse> {
-    const requestHeaders = await headers();
+export async function deleteBeneficiary(
+    actor: BeneficiaryActor,
+    id: string,
+    password: string,
+): Promise<ServerResponse> {
+    const authCheck = await verifyAdminPassword(password, actor);
 
-    try {
-        await auth.api.verifyPassword({
-            body: { password },
-            headers: requestHeaders,
-        });
-    } catch (error) {
-        if (error instanceof APIError) {
-            if (readErrorCode(error) === "INVALID_PASSWORD") {
-                return serverFailure("Senha incorreta.");
-            }
-
-            return serverFailure("Não foi possível confirmar a senha.");
-        }
-
-        throw error;
+    if (!authCheck.ok) {
+        return authCheck;
     }
 
     const current = await prisma.beneficiary.findUnique({
         where: { id },
-        select: { id: true },
+        select: { id: true, name: true, status: true },
     });
 
     if (!current) {
@@ -637,6 +693,19 @@ export async function deleteBeneficiary(id: string, password: string): Promise<S
 
     await prisma.beneficiary.delete({
         where: { id },
+    });
+
+    await recordAuditLog({
+        action: "beneficiary.delete",
+        entityType: "beneficiary",
+        entityId: current.id,
+        entityLabel: current.name,
+        description: `Beneficiário "${current.name}" excluído`,
+        actorId: actor.id,
+        actorName: actor.name,
+        metadata: {
+            status: current.status,
+        },
     });
 
     return serverSuccess(undefined, "Beneficiário excluído com sucesso.");
@@ -866,7 +935,7 @@ async function cpfExists(
     return member !== null;
 }
 
-function toBeneficiary(row: BeneficiaryRow): BeneficiaryRecord {
+function toBaseBeneficiary(row: AssistedBeneficiaryRow): Omit<BeneficiaryRecord, "members"> {
     const gender = isBeneficiaryGender(row.gender) ? row.gender : "unspecified";
     const maritalStatus = isMaritalStatus(row.maritalStatus) ? row.maritalStatus : "single";
     const employment = isEmployment(row.employment) ? row.employment : "unemployed";
@@ -897,13 +966,38 @@ function toBeneficiary(row: BeneficiaryRow): BeneficiaryRecord {
         expectedDeliveryDay: row.expectedDeliveryDay,
         disability,
         rent,
-        members: row.members.map((member) => toFamilyMember(member)),
         assistants: row.assistants
             .map((assistant) => ({
                 id: assistant.user.id,
                 name: assistant.user.name,
             }))
             .sort((left, right) => left.name.localeCompare(right.name, "pt-BR")),
+    };
+}
+
+function toBeneficiary(row: BeneficiaryRow): BeneficiaryRecord {
+    return {
+        ...toBaseBeneficiary(row),
+        members: row.members.map((member) => toFamilyMember(member)),
+    };
+}
+
+function toAssistedBeneficiary(row: AssistedBeneficiaryRow): AssistedBeneficiaryDetail {
+    return {
+        ...toBaseBeneficiary(row),
+        members: row.members.map(toAssistedFamilyMember),
+    };
+}
+
+function toAssistedFamilyMember(row: AssistedFamilyMemberRow): AssistedFamilyMemberSummary {
+    const kinship = isKinship(row.kinship) ? row.kinship : "other";
+    const gender = row.gender ?? "";
+
+    return {
+        id: row.id,
+        name: row.name,
+        kinship,
+        kinshipLabel: kinshipLabel(kinship, gender),
     };
 }
 
@@ -1005,14 +1099,4 @@ function uniqueCpfFailure(error: unknown): ServerFailure | null {
     }
 
     return serverFailure("Não foi possível salvar o beneficiário.");
-}
-
-function readErrorCode(error: APIError): string | null {
-    const body = error.body;
-
-    if (!body || typeof body !== "object" || !("code" in body)) {
-        return null;
-    }
-
-    return typeof body.code === "string" ? body.code : null;
 }

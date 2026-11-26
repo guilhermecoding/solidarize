@@ -12,6 +12,7 @@ type WithdrawBasketSelectionStepProps = {
     baskets: BasketRecord[];
     quantities: Record<string, number>;
     disabled?: boolean;
+    maxTotalUnits?: number;
     onChangeQuantity: (basketId: string, nextValue: number) => void;
 };
 
@@ -22,6 +23,7 @@ export function WithdrawBasketSelectionStep({
     baskets,
     quantities,
     disabled = false,
+    maxTotalUnits,
     onChangeQuantity,
 }: WithdrawBasketSelectionStepProps) {
     if (baskets.length === 0) {
@@ -35,6 +37,15 @@ export function WithdrawBasketSelectionStep({
         );
     }
 
+    const totalSelectedUnits = baskets.reduce(
+        (sum, basket) => sum + Math.min(Math.max(0, quantities[basket.id] ?? 0), basket.quantity),
+        0,
+    );
+    const remainingTotal =
+        maxTotalUnits !== undefined
+            ? Math.max(0, maxTotalUnits - totalSelectedUnits)
+            : Number.POSITIVE_INFINITY;
+
     return (
         <ul className="grid grid-cols-1 gap-4 p-2.5 sm:grid-cols-2 lg:grid-cols-3">
             {baskets.map((basket) => {
@@ -42,6 +53,7 @@ export function WithdrawBasketSelectionStep({
                     Math.max(0, quantities[basket.id] ?? 0),
                     basket.quantity,
                 );
+                const maxForItem = Math.min(basket.quantity, selectedQuantity + remainingTotal);
                 const isSelected = selectedQuantity > 0;
 
                 return (
@@ -127,7 +139,7 @@ export function WithdrawBasketSelectionStep({
                                 <WithdrawQuantityControl
                                     itemLabel={`cesta ${basket.name}`}
                                     value={selectedQuantity}
-                                    max={basket.quantity}
+                                    max={maxForItem}
                                     disabled={disabled}
                                     onChange={(nextValue) => onChangeQuantity(basket.id, nextValue)}
                                 />
