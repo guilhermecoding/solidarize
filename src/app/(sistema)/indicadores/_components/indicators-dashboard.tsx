@@ -191,18 +191,30 @@ export function IndicatorsDashboard({ indicators }: { indicators: IndicatorsSnap
             ) : null}
 
             <Tabs defaultValue="overview" className="gap-5">
-                <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-2xl p-1 sm:inline-flex sm:h-10 sm:w-fit">
-                    <TabsTrigger value="overview" className="cursor-pointer rounded-xl px-3 py-1.5 text-xs sm:text-sm">
-                        Visão Geral
+                <TabsList className="grid h-auto! w-full grid-cols-2 gap-1 rounded-2xl p-1 sm:inline-flex sm:h-10! sm:w-fit">
+                    <TabsTrigger
+                        value="overview"
+                        className="h-9! min-w-0 cursor-pointer rounded-xl px-2.5 text-xs sm:h-[calc(100%-1px)]! sm:flex-initial sm:px-4 sm:text-sm"
+                    >
+                        <span className="truncate sm:overflow-visible sm:text-clip">Visão Geral</span>
                     </TabsTrigger>
-                    <TabsTrigger value="beneficiaries" className="cursor-pointer rounded-xl px-3 py-1.5 text-xs sm:text-sm">
-                        Beneficiários
+                    <TabsTrigger
+                        value="beneficiaries"
+                        className="h-9! min-w-0 cursor-pointer rounded-xl px-2.5 text-xs sm:h-[calc(100%-1px)]! sm:flex-initial sm:px-4 sm:text-sm"
+                    >
+                        <span className="truncate sm:overflow-visible sm:text-clip">Beneficiários</span>
                     </TabsTrigger>
-                    <TabsTrigger value="deliveries" className="cursor-pointer rounded-xl px-3 py-1.5 text-xs sm:text-sm">
-                        Entregas e Equipe
+                    <TabsTrigger
+                        value="deliveries"
+                        className="h-9! min-w-0 cursor-pointer rounded-xl px-2.5 text-xs sm:h-[calc(100%-1px)]! sm:flex-initial sm:px-4 sm:text-sm"
+                    >
+                        <span className="truncate sm:overflow-visible sm:text-clip">Entregas e Equipe</span>
                     </TabsTrigger>
-                    <TabsTrigger value="inventory" className="cursor-pointer rounded-xl px-3 py-1.5 text-xs sm:text-sm">
-                        Estoque
+                    <TabsTrigger
+                        value="inventory"
+                        className="h-9! min-w-0 cursor-pointer rounded-xl px-2.5 text-xs sm:h-[calc(100%-1px)]! sm:flex-initial sm:px-4 sm:text-sm"
+                    >
+                        <span className="truncate sm:overflow-visible sm:text-clip">Estoque</span>
                     </TabsTrigger>
                 </TabsList>
 

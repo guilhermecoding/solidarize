@@ -280,28 +280,6 @@ export function DeliveryScheduleBarChart({
             title="Previsão de entregas no mês"
             description="Distribuição de famílias aprovadas pelo dia previsto para entrega do benefício."
             className="lg:col-span-2"
-            action={
-                totalScheduled > 0 ? (
-                    <div className="flex items-center gap-1 rounded-xl bg-muted p-1">
-                        <Button
-                            type="button"
-                            size="xs"
-                            variant={mode === "weekly" ? "secondary" : "ghost"}
-                            onClick={() => setModeOverride("weekly")}
-                        >
-                            Por semana
-                        </Button>
-                        <Button
-                            type="button"
-                            size="xs"
-                            variant={mode === "daily" ? "secondary" : "ghost"}
-                            onClick={() => setModeOverride("daily")}
-                        >
-                            Dia 1–31
-                        </Button>
-                    </div>
-                ) : null
-            }
             footer={
                 unscheduledCount > 0
                     ? `${formatNumberBr(unscheduledCount)} ${unscheduledCount === 1 ? "família aprovada não possui dia previsto definido." : "famílias aprovadas não possuem dia previsto definido."}`
@@ -315,10 +293,31 @@ export function DeliveryScheduleBarChart({
                     description="Nenhuma família aprovada possui dia previsto para entrega cadastrado."
                 />
             ) : (
-                <ChartContainer
-                    config={SCHEDULE_CONFIG}
-                    className="aspect-auto h-[240px] w-full sm:h-[260px]"
-                >
+                <>
+                    <div className="mb-3 flex justify-start sm:justify-end">
+                        <div className="flex items-center gap-1 rounded-xl bg-muted p-1">
+                            <Button
+                                type="button"
+                                size="xs"
+                                variant={mode === "weekly" ? "secondary" : "ghost"}
+                                onClick={() => setModeOverride("weekly")}
+                            >
+                                Por semana
+                            </Button>
+                            <Button
+                                type="button"
+                                size="xs"
+                                variant={mode === "daily" ? "secondary" : "ghost"}
+                                onClick={() => setModeOverride("daily")}
+                            >
+                                Dia 1–31
+                            </Button>
+                        </div>
+                    </div>
+                    <ChartContainer
+                        config={SCHEDULE_CONFIG}
+                        className="aspect-auto h-[240px] w-full sm:h-[260px]"
+                    >
                     <BarChart
                         data={data}
                         margin={{ top: 20, right: 8, left: 0, bottom: 4 }}
@@ -365,6 +364,7 @@ export function DeliveryScheduleBarChart({
                         </Bar>
                     </BarChart>
                 </ChartContainer>
+                </>
             )}
         </IndicatorCard>
     );
