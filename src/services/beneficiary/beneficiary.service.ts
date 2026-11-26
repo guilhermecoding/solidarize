@@ -24,6 +24,7 @@ import {
     isMaritalStatus,
     isRentOption,
     kinshipLabel,
+    parseExpectedDeliveryDay,
     cpfTakenMessage,
     CPF_TAKEN_MESSAGE,
     type AidType,
@@ -93,6 +94,7 @@ type PreparedMember = {
     notes: string | null;
     status: BeneficiaryStatus | null;
     aidType: AidType | null;
+    expectedDeliveryDay: number | null;
     disability: DisabilityOption | null;
     rent: RentOption | null;
     contacts: PreparedContact[];
@@ -115,6 +117,7 @@ type PreparedBeneficiary = {
     notes: string | null;
     status: BeneficiaryStatus;
     aidType: AidType;
+    expectedDeliveryDay: number;
     disability: DisabilityOption;
     rent: RentOption;
     contacts: PreparedContact[];
@@ -653,10 +656,11 @@ function prepareBeneficiary(input: BeneficiaryInput): PreparedBeneficiary | Serv
     const employment = isEmployment(value.employment) ? value.employment : null;
     const status = isBeneficiaryStatus(value.status) ? value.status : null;
     const aidType = isAidType(value.aidType) ? value.aidType : null;
+    const expectedDeliveryDay = parseExpectedDeliveryDay(value.expectedDeliveryDay);
     const disability = isDisabilityOption(value.disability) ? value.disability : null;
     const rent = isRentOption(value.rent) ? value.rent : null;
 
-    if (!dateOfBirth || !gender || !maritalStatus || !employment || !status || !aidType || !disability || !rent || !isBrazilianState(value.state)) {
+    if (!dateOfBirth || !gender || !maritalStatus || !employment || !status || !aidType || expectedDeliveryDay === null || !disability || !rent || !isBrazilianState(value.state)) {
         return serverFailure("Dados inválidos.");
     }
 
@@ -677,6 +681,7 @@ function prepareBeneficiary(input: BeneficiaryInput): PreparedBeneficiary | Serv
         notes: emptyToNull(value.notes),
         status,
         aidType,
+        expectedDeliveryDay,
         disability,
         rent,
         contacts: toContacts(value.contacts),
@@ -693,6 +698,12 @@ function prepareBeneficiary(input: BeneficiaryInput): PreparedBeneficiary | Serv
 
         if (member.dateOfBirth.trim() !== "" && !dateOfBirth) {
             return serverFailure("Informe uma data válida no formato DD/MM/AAAA.");
+        }
+
+        const parsedMemberDeliveryDay = parseOptionalExpectedDeliveryDay(member.expectedDeliveryDay);
+
+        if (!parsedMemberDeliveryDay.ok) {
+            return parsedMemberDeliveryDay;
         }
 
         const memberEmployment = isEmployment(member.employment) ? member.employment : null;
@@ -715,6 +726,7 @@ function prepareBeneficiary(input: BeneficiaryInput): PreparedBeneficiary | Serv
             notes: emptyToNull(member.notes),
             status: isBeneficiaryStatus(member.status) ? member.status : null,
             aidType: isAidType(member.aidType) ? member.aidType : null,
+            expectedDeliveryDay: parsedMemberDeliveryDay.day,
             disability: isDisabilityOption(member.disability) ? member.disability : null,
             rent: isRentOption(member.rent) ? member.rent : null,
             contacts: toContacts(member.contacts),
@@ -722,6 +734,22 @@ function prepareBeneficiary(input: BeneficiaryInput): PreparedBeneficiary | Serv
     }
 
     return prepared;
+}
+
+function parseOptionalExpectedDeliveryDay(
+    value: string,
+): { ok: true; day: number | null } | ServerFailure {
+    if (value.trim() === "") {
+        return { ok: true, day: null };
+    }
+
+    const day = parseExpectedDeliveryDay(value);
+
+    if (day === null) {
+        return serverFailure("Informe um dia do mês entre 1 e 31.");
+    }
+
+    return { ok: true, day };
 }
 
 function beneficiaryData(prepared: PreparedBeneficiary) {
@@ -741,6 +769,7 @@ function beneficiaryData(prepared: PreparedBeneficiary) {
         notes: prepared.notes,
         status: prepared.status,
         aidType: prepared.aidType,
+        expectedDeliveryDay: prepared.expectedDeliveryDay,
         disability: prepared.disability,
         rent: prepared.rent,
     };
@@ -764,6 +793,7 @@ function memberData(member: PreparedMember) {
         notes: member.notes,
         status: member.status,
         aidType: member.aidType,
+        expectedDeliveryDay: member.expectedDeliveryDay,
         disability: member.disability,
         rent: member.rent,
     };
@@ -864,6 +894,7 @@ function toBeneficiary(row: BeneficiaryRow): BeneficiaryRecord {
         notes: row.notes ?? "",
         status,
         aidType,
+        expectedDeliveryDay: row.expectedDeliveryDay,
         disability,
         rent,
         members: row.members.map((member) => toFamilyMember(member)),
@@ -917,6 +948,7 @@ function toFamilyMember(row: FamilyMemberRow): FamilyMemberRecord {
         notes: row.notes ?? "",
         status: row.status ?? "",
         aidType: row.aidType ?? "",
+        expectedDeliveryDay: row.expectedDeliveryDay,
         disability: row.disability ?? "",
         rent: row.rent ?? "",
     };

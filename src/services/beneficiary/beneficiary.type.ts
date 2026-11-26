@@ -162,6 +162,37 @@ export const rentLabels: Record<RentOption, string> = {
     no: "Não paga",
 };
 
+export const EXPECTED_DELIVERY_DAY_MIN = 1;
+export const EXPECTED_DELIVERY_DAY_MAX = 31;
+
+export function formatExpectedDeliveryDayInput(value: string): string {
+    return value.replace(/\D/g, "").slice(0, 2);
+}
+
+export function parseExpectedDeliveryDay(value: string): number | null {
+    const trimmed = value.trim();
+
+    if (!/^\d{1,2}$/.test(trimmed)) {
+        return null;
+    }
+
+    const day = Number.parseInt(trimmed, 10);
+
+    if (day < EXPECTED_DELIVERY_DAY_MIN || day > EXPECTED_DELIVERY_DAY_MAX) {
+        return null;
+    }
+
+    return day;
+}
+
+export function isValidExpectedDeliveryDay(value: string): boolean {
+    return parseExpectedDeliveryDay(value) !== null;
+}
+
+export function formatExpectedDeliveryDay(day: number | null): string {
+    return day === null ? "" : String(day);
+}
+
 export function isBeneficiaryGender(value: string): value is BeneficiaryGender {
     return beneficiaryGenders.some((gender) => gender === value);
 }
@@ -277,6 +308,7 @@ export type FamilyMemberInput = {
     notes: string;
     status: string;
     aidType: string;
+    expectedDeliveryDay: string;
     disability: string;
     rent: string;
 };
@@ -298,6 +330,7 @@ export type BeneficiaryInput = {
     notes: string;
     status: string;
     aidType: string;
+    expectedDeliveryDay: string;
     disability: string;
     rent: string;
     members: FamilyMemberInput[];
@@ -329,6 +362,7 @@ export type FamilyMemberRecord = {
     notes: string;
     status: string;
     aidType: string;
+    expectedDeliveryDay: number | null;
     disability: string;
     rent: string;
 };
@@ -380,6 +414,7 @@ export type BeneficiaryRecord = {
     notes: string;
     status: BeneficiaryStatus;
     aidType: AidType;
+    expectedDeliveryDay: number | null;
     disability: DisabilityOption;
     rent: RentOption;
     members: FamilyMemberRecord[];

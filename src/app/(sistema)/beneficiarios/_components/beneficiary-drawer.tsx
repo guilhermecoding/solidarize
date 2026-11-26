@@ -74,6 +74,8 @@ import {
     disabilityOptions,
     employmentLabels,
     employments,
+    formatExpectedDeliveryDay,
+    formatExpectedDeliveryDayInput,
     isKinshipAllowed,
     kinshipLabel,
     kinshipOptionsForGender,
@@ -87,6 +89,7 @@ import {
 import {
     Add01Icon,
     BirthdayCakeIcon,
+    Calendar03Icon,
     Call02Icon,
     Cancel01Icon,
     IdCardIcon,
@@ -894,6 +897,25 @@ function BeneficiaryForm({
                                         />
                                     )}
                                 </form.Field>
+                                <form.Field name="expectedDeliveryDay">
+                                    {(field) => (
+                                        <TextField
+                                            field={field}
+                                            label="Dia previsto para entrega de benefício"
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
+                                            maxLength={2}
+                                            autoComplete="off"
+                                            placeholder="Ex: 15"
+                                            className="tabular-nums"
+                                            attempts={submissionAttempts}
+                                            format={formatExpectedDeliveryDayInput}
+                                            icon={Calendar03Icon}
+                                            required
+                                        />
+                                    )}
+                                </form.Field>
                             </div>
                             <form.Field name="notes">
                                 {(field) => (
@@ -1431,6 +1453,24 @@ function FamilyMemberFields({
                         />
                     )}
                 </form.Field>
+                <form.Field name={`members[${index}].expectedDeliveryDay`}>
+                    {(field) => (
+                        <TextField
+                            field={field}
+                            label="Dia previsto para entrega de benefício"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            maxLength={2}
+                            autoComplete="off"
+                            placeholder="Ex: 15"
+                            className="tabular-nums"
+                            attempts={attempts}
+                            format={formatExpectedDeliveryDayInput}
+                            icon={Calendar03Icon}
+                        />
+                    )}
+                </form.Field>
             </div>
             <form.Field name={`members[${index}].notes`}>
                 {(field) => (
@@ -1910,6 +1950,7 @@ function toFormValues(beneficiary: BeneficiaryRecord): BeneficiaryFormValues {
         notes: beneficiary.notes,
         status: beneficiary.status,
         aidType: beneficiary.aidType,
+        expectedDeliveryDay: formatExpectedDeliveryDay(beneficiary.expectedDeliveryDay),
         disability: beneficiary.disability,
         rent: beneficiary.rent,
         members: beneficiary.members.map((member) => ({
@@ -1931,6 +1972,7 @@ function toFormValues(beneficiary: BeneficiaryRecord): BeneficiaryFormValues {
             notes: member.notes,
             status: member.status,
             aidType: member.aidType,
+            expectedDeliveryDay: formatExpectedDeliveryDay(member.expectedDeliveryDay),
             disability: member.disability,
             rent: member.rent,
         })),

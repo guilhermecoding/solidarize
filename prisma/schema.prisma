@@ -116,6 +116,7 @@ model Beneficiary {
   notes         String?
   status        String
   aidType       String
+  expectedDeliveryDay Int?
   disability    String
   rent          String
   createdAt     DateTime               @default(now())
@@ -177,6 +178,7 @@ model FamilyMember {
   notes          String?
   status         String?
   aidType        String?
+  expectedDeliveryDay Int?
   disability     String?
   rent           String?
   createdAt      DateTime              @default(now())

@@ -11,6 +11,7 @@ import {
     disabilityOptions,
     employments,
     isKinshipAllowed,
+    isValidExpectedDeliveryDay,
     maritalStatuses,
     rentOptions,
     type BeneficiaryInput,
@@ -37,6 +38,23 @@ const optionalBirthDateSchema = z
     .refine(
         (value) => value === "" || isBirthDateInputValid(value),
         "Informe uma data válida no formato DD/MM/AAAA.",
+    );
+
+const optionalExpectedDeliveryDaySchema = z
+    .string()
+    .trim()
+    .refine(
+        (value) => value === "" || isValidExpectedDeliveryDay(value),
+        "Informe um dia do mês entre 1 e 31.",
+    );
+
+const requiredExpectedDeliveryDaySchema = z
+    .string()
+    .trim()
+    .min(1, "Informe o dia previsto para entrega de benefício.")
+    .refine(
+        isValidExpectedDeliveryDay,
+        "Informe um dia do mês entre 1 e 31.",
     );
 
 const notesSchema = z
@@ -98,6 +116,7 @@ export const familyMemberFormSchema = z.object({
     notes: notesSchema,
     status: optionalChoice(beneficiaryStatuses, "Selecione a situação."),
     aidType: optionalChoice(aidTypes, "Selecione o tipo de auxílio."),
+    expectedDeliveryDay: optionalExpectedDeliveryDaySchema,
     disability: optionalChoice(disabilityOptions, "Informe se possui deficiência."),
     rent: optionalChoice(rentOptions, "Informe se paga aluguel."),
 });
@@ -122,6 +141,7 @@ export const beneficiaryFormSchema = z.object({
     notes: notesSchema,
     status: requiredChoice(beneficiaryStatuses, "Selecione a situação."),
     aidType: requiredChoice(aidTypes, "Selecione o tipo de auxílio."),
+    expectedDeliveryDay: requiredExpectedDeliveryDaySchema,
     disability: requiredChoice(disabilityOptions, "Informe se possui deficiência."),
     rent: requiredChoice(rentOptions, "Informe se paga aluguel."),
     members: z.array(familyMemberFormSchema),
@@ -246,6 +266,7 @@ export const emptyFamilyMemberFormValues: FamilyMemberFormValues = {
     notes: "",
     status: "",
     aidType: "",
+    expectedDeliveryDay: "",
     disability: "",
     rent: "",
 };
@@ -267,6 +288,7 @@ export const emptyBeneficiaryFormValues: BeneficiaryFormValues = {
     notes: "",
     status: "",
     aidType: "",
+    expectedDeliveryDay: "",
     disability: "",
     rent: "",
     members: [],
