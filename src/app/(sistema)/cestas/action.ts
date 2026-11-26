@@ -80,6 +80,7 @@ function refreshInventory({
     }
 
     revalidatePath("/cestas");
+    revalidatePath("/indicadores");
 }
 
 export const getNextBasketNameAction = inventoryWriteActionClient.action(async () => {

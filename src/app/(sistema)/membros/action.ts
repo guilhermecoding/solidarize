@@ -21,6 +21,7 @@ export const createMemberAction = writeActionClient
         if (result.ok) {
             updateTag(USER_CACHE_TAG);
             revalidatePath("/membros");
+            revalidatePath("/indicadores");
         }
 
         return result;
@@ -35,6 +36,7 @@ export const updateMemberAction = writeActionClient
             updateTag(USER_CACHE_TAG);
             updateTag(BENEFICIARY_CACHE_TAG);
             revalidatePath("/membros");
+            revalidatePath("/indicadores");
         }
 
         return result;
@@ -49,6 +51,7 @@ export const deleteMemberAction = writeActionClient
             updateTag(USER_CACHE_TAG);
             updateTag(BENEFICIARY_CACHE_TAG);
             revalidatePath("/membros");
+            revalidatePath("/indicadores");
         }
 
         return result;
