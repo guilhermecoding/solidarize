@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/sidebar";
 import { ThemeSelect } from "@/components/theme-select";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { UnfoldMoreIcon, PaintBoardIcon, LogoutCircle02Icon } from "@hugeicons/core-free-icons";
+import { InfoIcon, UnfoldMoreIcon, PaintBoardIcon, LogoutCircle02Icon } from "@hugeicons/core-free-icons";
 import { useRouter } from "next/navigation";
 import { signOut } from "@/lib/auth-client";
 
@@ -89,6 +89,7 @@ function NavUserMenuContent({
   signingOut,
   onSignOut,
   onThemeSelectOpenChange,
+  showAbout = false,
   themeSide = "right",
   themeAlign = "center",
   themeContentClassName,
@@ -97,10 +98,12 @@ function NavUserMenuContent({
   signingOut: boolean;
   onSignOut: () => void;
   onThemeSelectOpenChange: (open: boolean) => void;
+  showAbout?: boolean;
   themeSide?: "top" | "right" | "bottom" | "left";
   themeAlign?: "start" | "center" | "end";
   themeContentClassName?: string;
 }) {
+  const router = useRouter();
   const initials = getInitials(user.name);
 
   return (
@@ -135,6 +138,15 @@ function NavUserMenuContent({
         </div>
       </div>
       <DropdownMenuSeparator />
+      {showAbout ? (
+        <>
+          <DropdownMenuItem onClick={() => router.push("/sobre")}>
+            <HugeiconsIcon icon={InfoIcon} strokeWidth={2} />
+            Sobre
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+        </>
+      ) : null}
       <DropdownMenuItem
         disabled={signingOut}
         onClick={onSignOut}
@@ -197,6 +209,7 @@ export function NavUser({
               user={user}
               signingOut={signingOut}
               onSignOut={handleSignOut}
+              showAbout={isMobile}
               onThemeSelectOpenChange={(open) => {
                 themeSelectOpenRef.current = open;
               }}
@@ -243,6 +256,7 @@ export function MobileNavUser({
           user={user}
           signingOut={signingOut}
           onSignOut={handleSignOut}
+          showAbout
           themeSide="top"
           themeAlign="end"
           themeContentClassName="mobile-nav-surface ring-border"
