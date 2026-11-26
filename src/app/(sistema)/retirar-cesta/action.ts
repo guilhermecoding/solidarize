@@ -30,6 +30,7 @@ export const withdrawAssistedBasketsAction = authActionClient
             revalidatePath("/cestas/historico");
             revalidatePath("/minhas-familias");
             revalidatePath(`/minhas-familias/${parsedInput.beneficiaryId}`);
+            revalidatePath("/indicadores");
         }
 
         return result;

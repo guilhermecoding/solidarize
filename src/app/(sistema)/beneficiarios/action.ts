@@ -26,6 +26,7 @@ function refreshBeneficiaries(id?: string) {
     revalidatePath("/cestas");
     revalidatePath("/retirar-cesta");
     revalidatePath("/minhas-familias");
+    revalidatePath("/indicadores");
 
     if (id) {
         revalidatePath(`/beneficiarios/${id}`);

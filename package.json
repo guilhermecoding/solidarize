@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "prepare": "husky",
-    "db:seed": "prisma db seed --config prisma7.config.ts"
+    "db:seed": "prisma db seed --config prisma7.config.ts",
+    "analyze": "next experimental-analyze"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

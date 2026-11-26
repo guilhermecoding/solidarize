@@ -183,6 +183,13 @@ function titularRows(
             value: beneficiaryStatusLabels[beneficiary.status],
         },
         { label: "Tipo de Auxílio", value: aidTypeLabels[beneficiary.aidType] },
+        {
+            label: "Dia previsto para entrega de benefício",
+            value:
+                beneficiary.expectedDeliveryDay !== null
+                    ? `Dia ${beneficiary.expectedDeliveryDay}`
+                    : EMPTY,
+        },
         { label: "Deficiência", value: disabilityLabels[beneficiary.disability] },
         { label: "Aluguel", value: rentLabels[beneficiary.rent] },
         { label: "Observações", value: text(beneficiary.notes) },
