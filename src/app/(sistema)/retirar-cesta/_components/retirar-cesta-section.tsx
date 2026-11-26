@@ -4,7 +4,6 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { RetirarCestaPanel } from "@/app/(sistema)/retirar-cesta/_components/retirar-cesta-panel";
 import TitlePage from "@/components/title-page";
 import { getCurrentUser } from "@/lib/current-user";
-import { getBrazilMonthRange } from "@/lib/date-br";
 import {
     listAvailableBaskets,
     listBeneficiaryIdsDeliveredInMonth,
@@ -36,13 +35,9 @@ export async function RetirarCestaSection() {
         );
     }
 
-    const { start, end, monthKey } = getBrazilMonthRange(new Date());
-    const deliveredThisMonthIds = await listBeneficiaryIdsDeliveredInMonth({
-        beneficiaryIds: beneficiaries.map((beneficiary) => beneficiary.id),
-        monthKey,
-        startIso: start.toISOString(),
-        endIso: end.toISOString(),
-    });
+    const deliveredThisMonthIds = await listBeneficiaryIdsDeliveredInMonth(
+        beneficiaries.map((beneficiary) => beneficiary.id),
+    );
 
     return (
         <>

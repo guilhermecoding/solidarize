@@ -5,6 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 
 import { WithdrawQuantityControl } from "@/app/(sistema)/cestas/_components/withdraw-quantity-control";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { BasketRecord } from "@/services/basket/basket.type";
 
@@ -13,17 +14,19 @@ type WithdrawBasketSelectionStepProps = {
     quantities: Record<string, number>;
     disabled?: boolean;
     maxTotalUnits?: number;
+    selectionMode?: "quantity" | "single";
     onChangeQuantity: (basketId: string, nextValue: number) => void;
 };
 
 /**
- * Etapa de seleção de cestas em estoque com controle de quantidade para retirada.
+ * Etapa de seleção de cestas em estoque com controle de quantidade ou seleção única para retirada.
  */
 export function WithdrawBasketSelectionStep({
     baskets,
     quantities,
     disabled = false,
     maxTotalUnits,
+    selectionMode = "quantity",
     onChangeQuantity,
 }: WithdrawBasketSelectionStepProps) {
     if (baskets.length === 0) {
@@ -136,13 +139,41 @@ export function WithdrawBasketSelectionStep({
                             </div>
 
                             <div className="mt-auto border-t pt-3">
-                                <WithdrawQuantityControl
-                                    itemLabel={`cesta ${basket.name}`}
-                                    value={selectedQuantity}
-                                    max={maxForItem}
-                                    disabled={disabled}
-                                    onChange={(nextValue) => onChangeQuantity(basket.id, nextValue)}
-                                />
+                                {selectionMode === "single" ? (
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={isSelected ? "default" : "outline"}
+                                        className={cn(
+                                            "w-full",
+                                            !isSelected && "border-foreground/20",
+                                        )}
+                                        disabled={disabled || basket.quantity <= 0}
+                                        aria-pressed={isSelected}
+                                        onClick={() => onChangeQuantity(basket.id, isSelected ? 0 : 1)}
+                                    >
+                                        {isSelected ? (
+                                            <>
+                                                <HugeiconsIcon
+                                                    icon={Tick02Icon}
+                                                    strokeWidth={2.5}
+                                                    className="size-4"
+                                                />
+                                                Escolhida
+                                            </>
+                                        ) : (
+                                            "Escolher"
+                                        )}
+                                    </Button>
+                                ) : (
+                                    <WithdrawQuantityControl
+                                        itemLabel={`cesta ${basket.name}`}
+                                        value={selectedQuantity}
+                                        max={maxForItem}
+                                        disabled={disabled}
+                                        onChange={(nextValue) => onChangeQuantity(basket.id, nextValue)}
+                                    />
+                                )}
                             </div>
                         </article>
                     </li>

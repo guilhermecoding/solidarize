@@ -860,36 +860,28 @@ export async function withdrawAssistedBaskets(
 }
 
 /**
- * Retorna os IDs dos beneficiários informados que já receberam cesta no intervalo do mês informado.
+ * Retorna os IDs dos beneficiários informados que já receberam cesta no mês calendário atual.
  */
-export async function listBeneficiaryIdsDeliveredInMonth({
-    beneficiaryIds,
-    monthKey: _monthKey,
-    startIso,
-    endIso,
-}: {
-    beneficiaryIds: string[];
-    monthKey: string;
-    startIso: string;
-    endIso: string;
-}): Promise<string[]> {
+export async function listBeneficiaryIdsDeliveredInMonth(
+    beneficiaryIds: string[],
+): Promise<string[]> {
     "use cache";
     cacheTag(BASKET_HISTORY_CACHE_TAG);
     cacheLife("minutes");
 
-    void _monthKey;
-
     if (beneficiaryIds.length === 0) {
         return [];
     }
+
+    const { start, end } = getBrazilMonthRange(new Date());
 
     const rows = await prisma.basketHistory.findMany({
         where: {
             beneficiaryId: { in: beneficiaryIds },
             type: "out",
             createdAt: {
-                gte: new Date(startIso),
-                lt: new Date(endIso),
+                gte: start,
+                lt: end,
             },
         },
         select: {

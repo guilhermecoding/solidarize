@@ -185,11 +185,9 @@ export function WithdrawAssistedBasketDrawer({
                         quantities={quantities}
                         disabled={isPending}
                         maxTotalUnits={1}
+                        selectionMode="single"
                         onChangeQuantity={(basketId, nextValue) =>
-                            setQuantities((prev) => ({
-                                ...prev,
-                                [basketId]: nextValue,
-                            }))
+                            setQuantities(nextValue > 0 ? { [basketId]: 1 } : {})
                         }
                     />
                 ) : (
