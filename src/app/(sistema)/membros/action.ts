@@ -1,0 +1,75 @@
+"use server";
+
+import { revalidatePath, updateTag } from "next/cache";
+
+import { readActionClient, writeActionClient } from "@/lib/safe-action";
+import { AUDIT_LOG_CACHE_TAG } from "@/services/audit/audit.service";
+import { BENEFICIARY_CACHE_TAG } from "@/services/beneficiary/beneficiary.service";
+import { USER_CACHE_TAG, createMember, deleteMember, searchMembers, setMemberPassword, updateMember } from "@/services/user/user.service";
+import { deleteMemberSchema, memberFormSchema, searchMembersSchema, setMemberPasswordSchema, updateMemberSchema } from "./schema";
+
+function refreshAudit() {
+    updateTag(AUDIT_LOG_CACHE_TAG);
+    revalidatePath("/auditoria");
+}
+
+export const searchMembersAction = readActionClient
+    .inputSchema(searchMembersSchema)
+    .action(async ({ parsedInput }) => {
+        return searchMembers(parsedInput.query.replace(/\s+/g, " "));
+    });
+
+export const createMemberAction = writeActionClient
+    .inputSchema(memberFormSchema)
+    .action(async ({ parsedInput, ctx }) => {
+        const result = await createMember(ctx.actor, parsedInput);
+
+        if (result.ok) {
+            updateTag(USER_CACHE_TAG);
+            revalidatePath("/membros");
+            revalidatePath("/indicadores");
+            refreshAudit();
+        }
+
+        return result;
+    });
+
+export const updateMemberAction = writeActionClient
+    .inputSchema(updateMemberSchema)
+    .action(async ({ parsedInput, ctx }) => {
+        const result = await updateMember(ctx.actor, parsedInput);
+
+        if (result.ok) {
+            updateTag(USER_CACHE_TAG);
+            updateTag(BENEFICIARY_CACHE_TAG);
+            revalidatePath("/membros");
+            revalidatePath("/indicadores");
+            refreshAudit();
+        }
+
+        return result;
+    });
+
+export const deleteMemberAction = writeActionClient
+    .inputSchema(deleteMemberSchema)
+    .action(async ({ parsedInput, ctx }) => {
+        const result = await deleteMember(ctx.actor, parsedInput);
+
+        if (result.ok) {
+            updateTag(USER_CACHE_TAG);
+            updateTag(BENEFICIARY_CACHE_TAG);
+            revalidatePath("/membros");
+            revalidatePath("/indicadores");
+        }
+
+        refreshAudit();
+        return result;
+    });
+
+export const setMemberPasswordAction = writeActionClient
+    .inputSchema(setMemberPasswordSchema)
+    .action(async ({ parsedInput, ctx }) => {
+        const result = await setMemberPassword(ctx.actor, parsedInput);
+        refreshAudit();
+        return result;
+    });

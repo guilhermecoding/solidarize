@@ -1,0 +1,14 @@
+---
+description: Não executar o site no navegador; validar só com o build
+alwaysApply: true
+---
+
+# Não executar o site no navegador
+
+Nunca abra, renderize ou percorra este site visualmente. Vale para o app local e para o publicado.
+
+Não use navegador, automação (Chrome, agent-browser, Playwright, DevTools ou MCP de browser), screenshots da interface, login, cliques, formulários ou rotas.
+
+Para conferir se a alteração deu certo, rode apenas o build de produção (`npm run build`) e confirme que ele termina com sucesso. Se o build falhar, corrija e rode de novo.
+
+Se algo só pudesse ser conferido na tela, diga o que ficou sem verificação visual.
