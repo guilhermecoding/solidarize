@@ -9,8 +9,12 @@ export async function proxy(request: NextRequest) {
     const isLoginRoute =
         pathname === "/entrar" || pathname.startsWith("/entrar/");
     const isAuthApi = pathname.startsWith("/api/auth");
+    const isPublicPwaRoute =
+        pathname === "/~offline"
+        || pathname === "/manifest.webmanifest"
+        || pathname === "/sw.js";
 
-    if (isAuthApi) {
+    if (isAuthApi || isPublicPwaRoute) {
         return NextResponse.next();
     }
 
@@ -36,6 +40,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
     matcher: [
-        "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+        "/((?!_next/static|_next/image|favicon.ico|manifest\\.webmanifest|sw\\.js|swe-worker-.*\\.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
     ],
 };
