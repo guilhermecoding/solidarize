@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/banner-logo.png" alt="Solidarize" width="400" />
+</p>
+
 # Solidarize
 
 > *"Por trás de cada entrega, existe uma vida que importa. Gestão que transforma cuidado em impacto social."*
