@@ -23,17 +23,65 @@ const dmSans = DM_Sans({
   variable: "--font-dm-sans"
 });
 
+const SITE_NAME = "Solidarize";
+const SITE_DESCRIPTION =
+  "Por trás de cada entrega, existe uma vida que importa. Gestão que transforma cuidado em impacto social.";
+const OG_IMAGE_URL = "/og-image.jpg";
+
+function resolveMetadataBase(): URL {
+  const rawBaseUrl =
+    process.env.BETTER_AUTH_URL?.trim()
+    || (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "")
+    || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
+
+  if (rawBaseUrl) {
+    try {
+      return new URL(rawBaseUrl);
+    } catch {
+      // Fallback para localhost quando a variável de ambiente estiver vazia ou inválida.
+    }
+  }
+
+  return new URL("http://localhost:3000");
+}
+
 export const metadata: Metadata = {
-  applicationName: "Solidarize",
+  metadataBase: resolveMetadataBase(),
+  applicationName: SITE_NAME,
   title: {
-    default: "Solidarize",
-    template: "%s | Solidarize",
+    default: SITE_NAME,
+    template: `%s | ${SITE_NAME}`,
   },
-  description: "Solidarize é uma plataforma de gestão de doações para instituições de caridade.",
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    locale: "pt_BR",
+    url: "/",
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: OG_IMAGE_URL,
+        width: 1200,
+        height: 630,
+        alt: "Solidarize — Plataforma de gestão de doações",
+        type: "image/jpeg",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: [OG_IMAGE_URL],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Solidarize",
+    title: SITE_NAME,
   },
   icons: {
     apple: "/icons/icon-192x192.png",
