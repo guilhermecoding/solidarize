@@ -7,6 +7,14 @@ import {
     MobileBottomNavSkeleton,
 } from "@/components/mobile-bottom-nav-loader";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+    robots: {
+        index: false,
+        follow: false,
+    },
+};
 
 export default function SystemLayout({ children }: LayoutProps<"/">) {
     return (
